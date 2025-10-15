@@ -1,0 +1,119 @@
+/* Flag styling using country codes */
+.flag {
+  display: inline-block;
+  width: 24px;
+  height: 18px;
+  line-height: 18px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: bold;
+  color: white;
+  border-radius: 2px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.flag.US { background-color: #3C3B6E; }
+.flag.US::before { content: "US"; }
+
+.flag.ES { background-color: #C60B1E; }
+.flag.ES::before { content: "ES"; }
+
+.flag.FR { background-color: #002654; }
+.flag.FR::before { content: "FR"; }
+
+.flag.DE { background-color: #000000; }
+.flag.DE::before { content: "DE"; }
+
+.flag.IT { background-color: #009246; }
+.flag.IT::before { content: "IT"; }
+
+.flag.BR { background-color: #009B3A; }
+.flag.BR::before { content: "BR"; }
+
+.flag.RU { background-color: #FFFFFF; color: #000000; }
+.flag.RU::before { content: "RU"; }
+
+.flag.JP { background-color: #FFFFFF; color: #BC002D; }
+.flag.JP::before { content: "JP"; }
+
+.flag.CN { background-color: #DE2910; }
+.flag.CN::before { content: "CN"; }
+
+.flag.KR { background-color: #FFFFFF; color: #000000; }
+.flag.KR::before { content: "KR"; }
+
+.flag.SA { background-color: #006C35; }
+.flag.SA::before { content: "SA"; }
+
+.flag.IN { background-color: #FF9933; }
+.flag.IN::before { content: "IN"; }
+
+.flag.TH { background-color: #241D4F; }
+.flag.TH::before { content: "TH"; }
+
+.flag.VN { background-color: #DA251D; }
+.flag.VN::before { content: "VN"; }
+
+.flag.ID { background-color: #CE1126; }
+.flag.ID::before { content: "ID"; }
+
+.flag.MY { background-color: #CC0001; }
+.flag.MY::before { content: "MY"; }
+
+.flag.PH { background-color: #0038A8; }
+.flag.PH::before { content: "PH"; }
+
+.flag.TR { background-color: #E30A17; }
+.flag.TR::before { content: "TR"; }
+
+.flag.PL { background-color: #FFFFFF; color: #000000; }
+.flag.PL::before { content: "PL"; }
+
+.flag.NL { background-color: #AE1C28; }
+.flag.NL::before { content: "NL"; }
+
+.flag.SE { background-color: #005CBF; }
+.flag.SE::before { content: "SE"; }
+
+.flag.NO { background-color: #BA0C2F; }
+.flag.NO::before { content: "NO"; }
+
+.flag.DK { background-color: #C60C30; }
+.flag.DK::before { content: "DK"; }
+
+.flag.FI { background-color: #FFFFFF; color: #000000; }
+.flag.FI::before { content: "FI"; }
+
+.flag.GR { background-color: #0D5EAF; }
+.flag.GR::before { content: "GR"; }
+
+.flag.IL { background-color: #0038B8; }
+.flag.IL::before { content: "IL"; }
+
+.flag.CZ { background-color: #FFFFFF; color: #000000; }
+.flag.CZ::before { content: "CZ"; }
+
+.flag.HU { background-color: #CD2A3E; }
+.flag.HU::before { content: "HU"; }
+
+.flag.RO { background-color: #002B7F; }
+.flag.RO::before { content: "RO"; }
+
+.flag.UA { background-color: #005BBB; }
+.flag.UA::before { content: "UA"; }
+
+.flag.BG { background-color: #FFFFFF; color: #000000; }
+.flag.BG::before { content: "BG"; }
+
+.flag.HR { background-color: #FF0000; }
+.flag.HR::before { content: "HR"; }
+
+.flag.SK { background-color: #FFFFFF; color: #000000; }
+.flag.SK::before { content: "SK"; }
+
+.flag.SI { background-color: #FFFFFF; color: #000000; }
+.flag.SI::before { content: "SI"; }
+
+.flag.GB { background-color: #00247D; }
+.flag.GB::before { content: "GB"; }
