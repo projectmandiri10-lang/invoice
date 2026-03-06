@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { LogIn } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useI18n } from '@/contexts/I18nContext';
@@ -19,8 +19,17 @@ const copy = {
     or: 'or',
     noAccount: "Don't have an account?",
     register: 'Register',
+    forgotPassword: 'Forgot password?',
     loginFailed: 'Failed to sign in. Check your email and password.',
     googleFailed: 'Failed to sign in with Google.',
+    resendVerification: 'Resend verification email',
+    resendLoading: 'Sending...',
+    resendSuccess: 'A new verification email has been sent.',
+    resendFailed: 'Failed to resend verification email.',
+    emailRequiredForResend: 'Enter your email address first.',
+    unverifiedHint: 'Your email is not verified yet.',
+    noticeEmailVerified: 'Your email has been verified. You can sign in now.',
+    noticePasswordReset: 'Your password has been updated. Please sign in again.',
   },
   id: {
     title: 'Masuk',
@@ -35,8 +44,17 @@ const copy = {
     or: 'atau',
     noAccount: 'Belum punya akun?',
     register: 'Daftar',
+    forgotPassword: 'Lupa password?',
     loginFailed: 'Gagal masuk. Periksa email dan password Anda.',
     googleFailed: 'Gagal masuk dengan Google.',
+    resendVerification: 'Kirim ulang email verifikasi',
+    resendLoading: 'Mengirim...',
+    resendSuccess: 'Email verifikasi baru telah dikirim.',
+    resendFailed: 'Gagal mengirim ulang email verifikasi.',
+    emailRequiredForResend: 'Masukkan alamat email Anda terlebih dahulu.',
+    unverifiedHint: 'Email Anda belum diverifikasi.',
+    noticeEmailVerified: 'Email Anda sudah diverifikasi. Silakan masuk.',
+    noticePasswordReset: 'Password Anda berhasil diperbarui. Silakan masuk lagi.',
   },
 } as const;
 
@@ -46,13 +64,25 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [resendSuccess, setResendSuccess] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, signInWithGoogle } = useAuth();
+  const [resendLoading, setResendLoading] = useState(false);
+  const { signIn, signInWithGoogle, resendVerificationEmail } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const notice = searchParams.get('notice');
+  const noticeMessage =
+    notice === 'email-verified'
+      ? text.noticeEmailVerified
+      : notice === 'password-reset'
+        ? text.noticePasswordReset
+        : '';
+  const requiresVerification = /email not confirmed|email not verified/i.test(error);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError('');
+    setResendSuccess('');
     setLoading(true);
 
     try {
@@ -62,6 +92,26 @@ export default function LoginPage() {
       setError(err.message || text.loginFailed);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!email.trim()) {
+      setError(text.emailRequiredForResend);
+      return;
+    }
+
+    setError('');
+    setResendSuccess('');
+    setResendLoading(true);
+
+    try {
+      await resendVerificationEmail(email.trim());
+      setResendSuccess(text.resendSuccess);
+    } catch (err: any) {
+      setError(err.message || text.resendFailed);
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -84,7 +134,13 @@ export default function LoginPage() {
           <p className="mt-2 text-gray-600">{text.subtitle}</p>
         </div>
 
+        {noticeMessage && (
+          <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-700">{noticeMessage}</div>
+        )}
         {error && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700">{error}</div>}
+        {resendSuccess && (
+          <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-700">{resendSuccess}</div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
@@ -95,7 +151,10 @@ export default function LoginPage() {
               id="email"
               type="email"
               value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              onChange={(event) => {
+                setEmail(event.target.value);
+                setResendSuccess('');
+              }}
               required
               className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-transparent focus:ring-2 focus:ring-blue-500"
               placeholder={text.emailPlaceholder}
@@ -103,9 +162,14 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label htmlFor="password" className="mb-2 block text-sm font-medium text-gray-700">
-              {text.password}
-            </label>
+            <div className="mb-2 flex items-center justify-between gap-4">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                {text.password}
+              </label>
+              <Link to="/forgot-password" className="text-sm font-medium text-blue-600 hover:text-blue-700">
+                {text.forgotPassword}
+              </Link>
+            </div>
             <input
               id="password"
               type="password"
@@ -125,6 +189,20 @@ export default function LoginPage() {
             {loading ? text.loading : text.submit}
           </button>
         </form>
+
+        {requiresVerification && (
+          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <p className="font-medium">{text.unverifiedHint}</p>
+            <button
+              type="button"
+              onClick={handleResendVerification}
+              disabled={resendLoading}
+              className="mt-3 inline-flex items-center rounded-lg bg-amber-500 px-4 py-2 font-medium text-white transition-colors hover:bg-amber-600 disabled:cursor-not-allowed disabled:bg-amber-300"
+            >
+              {resendLoading ? text.resendLoading : text.resendVerification}
+            </button>
+          </div>
+        )}
 
         <div className="my-6 flex items-center">
           <div className="h-px flex-1 bg-gray-200" />

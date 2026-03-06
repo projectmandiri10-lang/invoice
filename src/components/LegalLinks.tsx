@@ -17,11 +17,11 @@ export default function LegalLinks({ className = '' }: { className?: string }) {
 
   return (
     <div className={className}>
-      <Link to="/terms" className="text-blue-600 hover:text-blue-700 font-medium">
+      <Link to="/terms" className="font-medium text-blue-600 hover:text-blue-700">
         {copy.terms}
       </Link>
-      <span className="mx-2 text-gray-400">•</span>
-      <Link to="/privacy" className="text-blue-600 hover:text-blue-700 font-medium">
+      <span className="mx-2 text-gray-400">&bull;</span>
+      <Link to="/privacy" className="font-medium text-blue-600 hover:text-blue-700">
         {copy.privacy}
       </Link>
     </div>

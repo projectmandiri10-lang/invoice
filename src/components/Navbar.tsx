@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { CreditCard, FileText, Home, Languages, LogOut, User, Users } from 'lucide-react';
+import { CreditCard, FileText, Home, Languages, LogOut, Settings2, User, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useI18n } from '@/contexts/I18nContext';
 import { getLanguageLabel, getPlanLabel, SUPPORTED_LOCALES } from '@/lib/i18n';
@@ -12,6 +12,7 @@ const copy = {
     myDocuments: 'My Documents',
     clients: 'Clients',
     billing: 'Billing',
+    account: 'Account',
     signOut: 'Sign out',
     signIn: 'Sign in',
     register: 'Register',
@@ -23,6 +24,7 @@ const copy = {
     myDocuments: 'Dokumen Saya',
     clients: 'Klien',
     billing: 'Billing',
+    account: 'Akun',
     signOut: 'Keluar',
     signIn: 'Masuk',
     register: 'Daftar',
@@ -103,6 +105,13 @@ export default function Navbar() {
 
             {user ? (
               <>
+                <Link
+                  to="/account"
+                  className="inline-flex h-10 items-center gap-2 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 hover:text-blue-600"
+                >
+                  <Settings2 className="h-4 w-4" />
+                  <span className="hidden sm:inline">{text.account}</span>
+                </Link>
                 <div className="inline-flex h-10 min-w-0 max-w-full items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 text-gray-700">
                   <User className="h-4 w-4 shrink-0" />
                   <span className="max-w-[160px] truncate text-sm">{user.email}</span>

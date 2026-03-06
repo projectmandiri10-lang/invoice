@@ -13,15 +13,26 @@ interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
   effectivePlan: AppPlan;
+  isEmailVerified: boolean;
   loading: boolean;
   refresh: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  resendVerificationEmail: (email: string) => Promise<void>;
+  sendPasswordResetEmail: (email: string) => Promise<void>;
+  updatePassword: (password: string) => Promise<void>;
+  updateEmail: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+function buildAuthRedirectUrl(flow: 'signup' | 'recovery' | 'email-change') {
+  const url = new URL('/auth/callback', window.location.origin);
+  url.searchParams.set('flow', flow);
+  return url.toString();
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -40,6 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const effectivePlan = useMemo(() => getEffectivePlan(profile, user), [profile, user]);
+  const isEmailVerified = Boolean(user?.email_confirmed_at);
 
   useEffect(() => {
     // Load user on mount
@@ -99,6 +111,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: buildAuthRedirectUrl('signup'),
+      },
     });
     if (error) throw error;
   }
@@ -116,6 +131,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         redirectTo,
       },
     });
+    if (error) throw error;
+  }
+
+  async function resendVerificationEmail(email: string) {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: {
+        emailRedirectTo: buildAuthRedirectUrl('signup'),
+      },
+    });
+    if (error) throw error;
+  }
+
+  async function sendPasswordResetEmail(email: string) {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: buildAuthRedirectUrl('recovery'),
+    });
+    if (error) throw error;
+  }
+
+  async function updatePassword(password: string) {
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) throw error;
+  }
+
+  async function updateEmail(email: string) {
+    const { error } = await supabase.auth.updateUser(
+      { email },
+      {
+        emailRedirectTo: buildAuthRedirectUrl('email-change'),
+      }
+    );
     if (error) throw error;
   }
 
@@ -140,7 +188,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, effectivePlan, loading, refresh, signIn, signUp, signOut, signInWithGoogle }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        profile,
+        effectivePlan,
+        isEmailVerified,
+        loading,
+        refresh,
+        signIn,
+        signUp,
+        signOut,
+        signInWithGoogle,
+        resendVerificationEmail,
+        sendPasswordResetEmail,
+        updatePassword,
+        updateEmail,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
