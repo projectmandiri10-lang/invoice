@@ -99,7 +99,7 @@ export default function RegisterPage() {
       await signUp(email, password);
       setSuccess(true);
       setTimeout(() => {
-        navigate('/login');
+        navigate('/check-email', { state: { email } });
       }, 2000);
     } catch (err: any) {
       setError(err.message || text.registerFailed);

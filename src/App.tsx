@@ -7,6 +7,7 @@ import { I18nProvider } from '@/contexts/I18nContext';
 const HomePage = lazy(() => import('@/pages/HomePage'));
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
 const RegisterPage = lazy(() => import('@/pages/RegisterPage'));
+const CheckEmailPage = lazy(() => import('@/pages/CheckEmailPage'));
 const MyDocumentsPage = lazy(() => import('@/pages/MyDocumentsPage'));
 const BillingPage = lazy(() => import('@/pages/BillingPage'));
 const BillingReturnPage = lazy(() => import('@/pages/BillingReturnPage'));
@@ -40,6 +41,7 @@ function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/check-email" element={<CheckEmailPage />} />
               <Route path="/my-documents" element={<MyDocumentsPage />} />
               <Route path="/billing" element={<BillingPage />} />
               <Route path="/billing/return" element={<BillingReturnPage />} />
