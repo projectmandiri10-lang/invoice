@@ -7,6 +7,7 @@ import SuratJalanPreview from '@/components/SuratJalanPreview';
 import KwitansiPreview from '@/components/KwitansiPreview';
 import { useAuth } from '@/contexts/AuthContext';
 import { useI18n } from '@/contexts/I18nContext';
+import { localizeInvoiceData, localizeKwitansiData, localizeSuratJalanData } from '@/lib/dummyData';
 import { supabase } from '@/lib/supabase';
 import { consumePdfExportQuota } from '@/lib/pdfExportQuota';
 import { exportInvoiceToPDF, exportKwitansiToPDF, exportSuratJalanToPDF } from '@/lib/documentUtils';
@@ -82,12 +83,19 @@ export default function ViewDocumentPage() {
         return;
       }
 
+      const localizedContent =
+        document.document_type === 'invoice'
+          ? localizeInvoiceData(document.content as InvoiceData, locale)
+          : document.document_type === 'surat_jalan'
+            ? localizeSuratJalanData(document.content as SuratJalanData, locale)
+            : localizeKwitansiData(document.content as KwitansiData, locale);
+
       if (document.document_type === 'invoice') {
-        await exportInvoiceToPDF(document.content as InvoiceData, document.settings, effectivePlan, locale);
+        await exportInvoiceToPDF(localizedContent as InvoiceData, document.settings, effectivePlan, locale);
       } else if (document.document_type === 'surat_jalan') {
-        await exportSuratJalanToPDF(document.content as SuratJalanData, document.settings, effectivePlan, locale);
+        await exportSuratJalanToPDF(localizedContent as SuratJalanData, document.settings, effectivePlan, locale);
       } else if (document.document_type === 'kwitansi') {
-        await exportKwitansiToPDF(document.content as KwitansiData, document.settings, effectivePlan, locale);
+        await exportKwitansiToPDF(localizedContent as KwitansiData, document.settings, effectivePlan, locale);
       }
     } catch (error) {
       console.error('Error exporting PDF:', error);
@@ -116,6 +124,13 @@ export default function ViewDocumentPage() {
   }
 
   if (!document) return null;
+
+  const localizedContent =
+    document.document_type === 'invoice'
+      ? localizeInvoiceData(document.content as InvoiceData, locale)
+      : document.document_type === 'surat_jalan'
+        ? localizeSuratJalanData(document.content as SuratJalanData, locale)
+        : localizeKwitansiData(document.content as KwitansiData, locale);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -150,13 +165,13 @@ export default function ViewDocumentPage() {
         </div>
 
         {document.document_type === 'invoice' && (
-          <InvoicePreview data={document.content as InvoiceData} settings={document.settings} />
+          <InvoicePreview data={localizedContent as InvoiceData} settings={document.settings} />
         )}
         {document.document_type === 'surat_jalan' && (
-          <SuratJalanPreview data={document.content as SuratJalanData} settings={document.settings} />
+          <SuratJalanPreview data={localizedContent as SuratJalanData} settings={document.settings} />
         )}
         {document.document_type === 'kwitansi' && (
-          <KwitansiPreview data={document.content as KwitansiData} settings={document.settings} />
+          <KwitansiPreview data={localizedContent as KwitansiData} settings={document.settings} />
         )}
       </div>
     </div>

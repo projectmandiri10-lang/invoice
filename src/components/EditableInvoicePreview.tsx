@@ -20,17 +20,27 @@ interface EditableInvoicePreviewProps {
 
 const copy = {
   en: {
+    from: 'From:',
+    to: 'To:',
+    number: 'No:',
     date: 'Date:',
     dueDate: 'Due Date:',
     companyName: 'Company Name',
     companyAddress: 'Company Address',
+    companyPhonePlaceholder: 'Phone: (021) xxx-xxxx',
     companyEmail: 'company@example.com',
+    companyTaxId: 'Tax ID: xx.xxx.xxx.x-xxx.xxx',
     phone: 'Phone',
     email: 'Email',
     clientName: 'Client Name',
     clientAddress: 'Client Address',
+    clientTaxId: 'Tax ID',
+    description: 'Description',
     itemDescription: 'Item Description',
+    newItem: 'New Item',
+    action: 'Action',
     paymentInfo: 'Payment Information:',
+    paymentInfoPlaceholder: 'Transfer to: Bank BCA - Account No. xxxx-xxxx-xxxx',
     notes: 'Notes:',
     defaultNote: 'Thank you for your trust.',
     subtotal: 'Subtotal:',
@@ -58,17 +68,27 @@ const copy = {
     upgradeProDescription: 'Large invoice? Enable the client portal and online payments with the Pro plan (Rp 150,000/month).',
   },
   id: {
+    from: 'Dari:',
+    to: 'Kepada:',
+    number: 'No:',
     date: 'Tanggal:',
     dueDate: 'Jatuh Tempo:',
     companyName: 'Nama Perusahaan',
     companyAddress: 'Alamat Perusahaan',
+    companyPhonePlaceholder: 'Telp: (021) xxx-xxxx',
     companyEmail: 'email@perusahaan.com',
+    companyTaxId: 'NPWP: xx.xxx.xxx.x-xxx.xxx',
     phone: 'Telepon',
     email: 'Email',
     clientName: 'Nama Klien',
     clientAddress: 'Alamat Klien',
+    clientTaxId: 'NPWP',
+    description: 'Deskripsi',
     itemDescription: 'Deskripsi Item',
+    newItem: 'Item Baru',
+    action: 'Aksi',
     paymentInfo: 'Informasi Pembayaran:',
+    paymentInfoPlaceholder: 'Transfer ke: Bank BCA - No. Rek: xxxx-xxxx-xxxx',
     notes: 'Catatan:',
     defaultNote: 'Terima kasih atas kepercayaan Anda.',
     subtotal: 'Subtotal:',
@@ -151,7 +171,7 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
   const addItem = () => {
     onChange({
       ...data,
-      items: [...data.items, { description: 'Item Baru', quantity: 1, unitPrice: 0, total: 0 }],
+      items: [...data.items, { description: text.newItem, quantity: 1, unitPrice: 0, total: 0 }],
     });
   };
 
@@ -293,7 +313,7 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
       <div className="mb-6 pb-4">
         <div className="flex justify-between items-start">
           <div className="flex items-center">
-            <span className="font-semibold mr-2">No:</span>
+            <span className="font-semibold mr-2">{text.number}</span>
             <input
               type="text"
               value={data.invoiceNumber}
@@ -335,7 +355,7 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
         <div className="grid grid-cols-2 gap-8">
           {/* Kolom Kiri: DARI */}
           <div>
-            <h3 className="text-sm font-bold text-gray-700 mb-3 uppercase">Dari:</h3>
+            <h3 className="text-sm font-bold text-gray-700 mb-3 uppercase">{text.from}</h3>
             <input
               type="text"
               value={data.companyName}
@@ -360,11 +380,11 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
               type="text"
               value={data.companyPhone}
               onChange={(e) => updateField('companyPhone', e.target.value)}
-              onFocus={(e) => e.target.value === 'Telp: (021) xxx-xxxx' && updateField('companyPhone', '')}
-              onBlur={(e) => e.target.value === '' && updateField('companyPhone', 'Telp: (021) xxx-xxxx')}
+              onFocus={(e) => e.target.value === text.companyPhonePlaceholder && updateField('companyPhone', '')}
+              onBlur={(e) => e.target.value === '' && updateField('companyPhone', text.companyPhonePlaceholder)}
               className="text-sm text-gray-600 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none w-full mb-1"
-              placeholder="Telp: (021) xxx-xxxx"
-              style={{ color: data.companyPhone === 'Telp: (021) xxx-xxxx' ? '#9ca3af' : 'inherit' }}
+              placeholder={text.companyPhonePlaceholder}
+              style={{ color: data.companyPhone === text.companyPhonePlaceholder ? '#9ca3af' : 'inherit' }}
             />
             <input
               type="email"
@@ -381,18 +401,18 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
                 type="text"
                 value={data.companyNPWP}
                 onChange={(e) => updateField('companyNPWP', e.target.value)}
-                onFocus={(e) => e.target.value === 'NPWP: xx.xxx.xxx.x-xxx.xxx' && updateField('companyNPWP', '')}
-                onBlur={(e) => e.target.value === '' && updateField('companyNPWP', 'NPWP: xx.xxx.xxx.x-xxx.xxx')}
+                onFocus={(e) => e.target.value === text.companyTaxId && updateField('companyNPWP', '')}
+                onBlur={(e) => e.target.value === '' && updateField('companyNPWP', text.companyTaxId)}
                 className="text-sm text-gray-600 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none w-full"
-                placeholder="NPWP: xx.xxx.xxx.x-xxx.xxx"
-                style={{ color: data.companyNPWP === 'NPWP: xx.xxx.xxx.x-xxx.xxx' ? '#9ca3af' : 'inherit' }}
+                placeholder={text.companyTaxId}
+                style={{ color: data.companyNPWP === text.companyTaxId ? '#9ca3af' : 'inherit' }}
               />
             )}
           </div>
 
           {/* Kolom Kanan: KEPADA */}
           <div>
-            <h3 className="text-sm font-bold text-gray-700 mb-3 uppercase">Kepada:</h3>
+            <h3 className="text-sm font-bold text-gray-700 mb-3 uppercase">{text.to}</h3>
             <input
               type="text"
               value={data.clientName}
@@ -443,7 +463,7 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
                 value={data.clientNPWP || ''}
                 onChange={(e) => updateField('clientNPWP', e.target.value)}
                 className="text-sm text-gray-600 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none w-full"
-                placeholder="NPWP"
+                placeholder={text.clientTaxId}
                 style={{ 
                   color: data.clientNPWP ? 'inherit' : '#9ca3af',
                   fontStyle: data.clientNPWP ? 'normal' : 'italic',
@@ -459,11 +479,11 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
         <thead>
           <tr style={{ backgroundColor: `${primaryColor}15` }}>
             <th className="text-center p-3 border border-gray-300 w-16">No</th>
-            <th className="text-left p-3 border border-gray-300">{locale === 'id' ? 'Deskripsi' : 'Description'}</th>
+            <th className="text-left p-3 border border-gray-300">{text.description}</th>
             <th className="text-center p-3 border border-gray-300 w-24">Qty</th>
             <th className="text-right p-3 border border-gray-300 w-32">{locale === 'id' ? 'Harga Satuan' : 'Unit Price'}</th>
             <th className="text-right p-3 border border-gray-300 w-32">Total</th>
-            <th className="text-center p-3 border border-gray-300 w-16">Aksi</th>
+            <th className="text-center p-3 border border-gray-300 w-16">{text.action}</th>
           </tr>
         </thead>
         <tbody>
@@ -477,11 +497,11 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
                   type="text"
                   value={item.description}
                   onChange={(e) => updateItem(index, 'description', e.target.value)}
-                  onFocus={(e) => (e.target.value === text.itemDescription || e.target.value === 'Item Baru') && updateItem(index, 'description', '')}
+                  onFocus={(e) => (e.target.value === text.itemDescription || e.target.value === text.newItem) && updateItem(index, 'description', '')}
                   onBlur={(e) => e.target.value === '' && updateItem(index, 'description', text.itemDescription)}
                   className="w-full bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500 px-2 py-1 rounded"
                   placeholder={text.itemDescription}
-                  style={{ color: (item.description === text.itemDescription || item.description === 'Item Baru') ? '#9ca3af' : 'inherit' }}
+                  style={{ color: (item.description === text.itemDescription || item.description === text.newItem) ? '#9ca3af' : 'inherit' }}
                 />
               </td>
               <td className="p-2 border border-gray-300">
@@ -544,12 +564,12 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
                 <textarea
                   value={data.paymentInfo}
                   onChange={(e) => updateField('paymentInfo', e.target.value)}
-                  onFocus={(e) => e.target.value === 'Transfer ke: Bank BCA - No. Rek: xxxx-xxxx-xxxx' && updateField('paymentInfo', '')}
-                  onBlur={(e) => e.target.value === '' && updateField('paymentInfo', 'Transfer ke: Bank BCA - No. Rek: xxxx-xxxx-xxxx')}
+                  onFocus={(e) => e.target.value === text.paymentInfoPlaceholder && updateField('paymentInfo', '')}
+                  onBlur={(e) => e.target.value === '' && updateField('paymentInfo', text.paymentInfoPlaceholder)}
                   className="w-full text-gray-700 bg-gray-50 border border-gray-200 focus:border-blue-500 focus:outline-none resize-none p-2 rounded"
-                  placeholder="Transfer ke: Bank BCA - No. Rek: xxxx-xxxx-xxxx"
+                  placeholder={text.paymentInfoPlaceholder}
                   rows={3}
-                  style={{ color: data.paymentInfo === 'Transfer ke: Bank BCA - No. Rek: xxxx-xxxx-xxxx' ? '#9ca3af' : 'inherit' }}
+                  style={{ color: data.paymentInfo === text.paymentInfoPlaceholder ? '#9ca3af' : 'inherit' }}
                 />
               </>
             )}

@@ -6,7 +6,14 @@ import { supabase } from '@/lib/supabase';
 import Navbar from '@/components/Navbar';
 import SettingsPanel, { defaultSettings, DocumentSettings } from '@/components/SettingsPanel';
 import { InvoiceData, SuratJalanData, KwitansiData, DocumentType } from '@/types/document';
-import { dummyInvoiceData, dummySuratJalanData, dummyKwitansiData } from '@/lib/dummyData';
+import {
+  createDummyInvoiceData,
+  createDummyKwitansiData,
+  createDummySuratJalanData,
+  localizeInvoiceData,
+  localizeKwitansiData,
+  localizeSuratJalanData,
+} from '@/lib/dummyData';
 import { exportInvoiceToPDF, exportSuratJalanToPDF, exportKwitansiToPDF } from '@/lib/documentUtils';
 import { consumePdfExportQuota } from '@/lib/pdfExportQuota';
 import {
@@ -146,9 +153,9 @@ export default function HomePage() {
   const location = useLocation();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<DocumentType>('invoice');
-  const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null);
-  const [suratJalanData, setSuratJalanData] = useState<SuratJalanData | null>(null);
-  const [kwitansiData, setKwitansiData] = useState<KwitansiData | null>(null);
+  const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(() => createDummyInvoiceData(locale));
+  const [suratJalanData, setSuratJalanData] = useState<SuratJalanData | null>(() => createDummySuratJalanData(locale));
+  const [kwitansiData, setKwitansiData] = useState<KwitansiData | null>(() => createDummyKwitansiData(locale));
   const [settings, setSettings] = useState<DocumentSettings>(defaultSettings);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -213,11 +220,11 @@ export default function HomePage() {
       setSettings(normalizeSettings(settings));
       
       if (document_type === 'invoice') {
-        setInvoiceData(content as InvoiceData);
+        setInvoiceData(localizeInvoiceData(content as InvoiceData, locale));
       } else if (document_type === 'surat_jalan') {
-        setSuratJalanData(content as SuratJalanData);
+        setSuratJalanData(localizeSuratJalanData(content as SuratJalanData, locale));
       } else if (document_type === 'kwitansi') {
-        setKwitansiData(content as KwitansiData);
+        setKwitansiData(localizeKwitansiData(content as KwitansiData, locale));
       }
       setLoading(false);
     } else {
@@ -225,7 +232,13 @@ export default function HomePage() {
       setCurrentDocumentType(null);
       loadTemplates();
     }
-  }, [location.state]);
+  }, [locale, location.state]);
+
+  useEffect(() => {
+    setInvoiceData((current) => (current ? localizeInvoiceData(current, locale) : current));
+    setSuratJalanData((current) => (current ? localizeSuratJalanData(current, locale) : current));
+    setKwitansiData((current) => (current ? localizeKwitansiData(current, locale) : current));
+  }, [locale]);
 
   // Auto-save functionality with debounce and error handling
   const autoSave = useCallback(async () => {
@@ -418,16 +431,18 @@ export default function HomePage() {
         }
       });
 
-      setInvoiceData(loadedInvoice ?? dummyInvoiceData);
-      setSuratJalanData(loadedSuratJalan ?? dummySuratJalanData);
-      setKwitansiData(loadedKwitansi ?? dummyKwitansiData);
+      setInvoiceData(loadedInvoice ? localizeInvoiceData(loadedInvoice, locale) : createDummyInvoiceData(locale));
+      setSuratJalanData(
+        loadedSuratJalan ? localizeSuratJalanData(loadedSuratJalan, locale) : createDummySuratJalanData(locale)
+      );
+      setKwitansiData(loadedKwitansi ? localizeKwitansiData(loadedKwitansi, locale) : createDummyKwitansiData(locale));
       setCurrentDocumentId(null);
       setCurrentDocumentType(null);
     } catch (error) {
       console.error('Error loading templates:', error);
-      setInvoiceData(dummyInvoiceData);
-      setSuratJalanData(dummySuratJalanData);
-      setKwitansiData(dummyKwitansiData);
+      setInvoiceData(createDummyInvoiceData(locale));
+      setSuratJalanData(createDummySuratJalanData(locale));
+      setKwitansiData(createDummyKwitansiData(locale));
       setCurrentDocumentId(null);
       setCurrentDocumentType(null);
 
@@ -730,13 +745,13 @@ export default function HomePage() {
   const handleDummyData = () => {
     switch (activeTab) {
       case 'invoice':
-        setInvoiceData(dummyInvoiceData);
+        setInvoiceData(createDummyInvoiceData(locale));
         break;
       case 'surat_jalan':
-        setSuratJalanData(dummySuratJalanData);
+        setSuratJalanData(createDummySuratJalanData(locale));
         break;
       case 'kwitansi':
-        setKwitansiData(dummyKwitansiData);
+        setKwitansiData(createDummyKwitansiData(locale));
         break;
     }
     setCurrentDocumentId(null);

@@ -33,6 +33,7 @@ const pdfCopy = {
     deliveryNumber: 'Delivery Note No.',
     sender: 'Sender:',
     recipient: 'Recipient:',
+    senderSignature: 'Sender,',
     itemDescription: 'Item Description',
     unit: 'Unit',
     receipt: 'RECEIPT',
@@ -63,6 +64,7 @@ const pdfCopy = {
     deliveryNumber: 'No. Surat Jalan',
     sender: 'Pengirim:',
     recipient: 'Penerima:',
+    senderSignature: 'Pengirim,',
     itemDescription: 'Deskripsi Barang',
     unit: 'Satuan',
     receipt: 'KWITANSI',
@@ -281,7 +283,7 @@ export async function exportInvoiceToPDF(
     if (userTier === 'free') {
     addWatermark();
   }
-  doc.save(`Invoice-${invoiceData.invoiceNumber}.pdf`);
+  doc.save(`${locale === 'id' ? 'Invoice' : 'Invoice'}-${invoiceData.invoiceNumber}.pdf`);
 }
 
 export async function exportSuratJalanToPDF(
@@ -364,7 +366,7 @@ export async function exportSuratJalanToPDF(
   const finalY = (doc as any).lastAutoTable.finalY;
   doc.setFontSize(10);
   doc.setTextColor(100);
-  doc.text('Pengirim,', 15, finalY + 20);
+  doc.text(text.senderSignature, 15, finalY + 20);
   doc.line(15, finalY + 42, 60, finalY + 42);
   doc.text(suratJalanData.senderSignatureName || '', 15, finalY + 47);
   doc.text(text.receiver, 150, finalY + 20);
@@ -384,7 +386,7 @@ export async function exportSuratJalanToPDF(
     if (userTier === 'free') {
     addWatermark();
   }
-  doc.save(`SuratJalan-${suratJalanData.suratJalanNumber}.pdf`);
+  doc.save(`${locale === 'id' ? 'SuratJalan' : 'DeliveryNote'}-${suratJalanData.suratJalanNumber}.pdf`);
 }
 
 export async function exportKwitansiToPDF(
@@ -479,5 +481,5 @@ export async function exportKwitansiToPDF(
     if (userTier === 'free') {
     addWatermark();
   }
-  doc.save(`Kwitansi-${kwitansiData.kwitansiNumber}.pdf`);
+  doc.save(`${locale === 'id' ? 'Kwitansi' : 'Receipt'}-${kwitansiData.kwitansiNumber}.pdf`);
 }
