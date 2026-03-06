@@ -29,7 +29,6 @@ export default function LoginPage() {
 const handleGoogleSignIn = async () => {
     try {
       await signInWithGoogle();
-      navigate('/');
     } catch (err: any) {
       setError(err.message || 'Gagal masuk dengan Google.');
     }

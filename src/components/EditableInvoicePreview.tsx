@@ -2,7 +2,7 @@ import React from 'react';
 import { toast } from 'sonner';
 import { InvoiceData } from '@/types/document';
 import { DocumentSettings } from '@/components/SettingsPanel';
-import { formatCurrency, formatDate } from '@/lib/documentUtils';
+import { formatCurrency, formatDate, getInvoiceLabel } from '@/lib/documentUtils';
 import { Plus, Trash2 } from 'lucide-react';
 import LogoUpload from '@/components/LogoUpload';
 import type { AppPlan } from '@/contexts/AuthContext';
@@ -23,6 +23,7 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
   const fontSize = settings?.font.size || 14;
   const padding = settings?.layout.margin || 20;
   const spacing = settings?.layout.spacing || 16;
+  const invoiceLabel = getInvoiceLabel(data);
   const applyDiscount = settings?.visibleFields.discount ?? false;
   const applyTax = settings?.visibleFields.tax ?? true;
 
@@ -198,7 +199,16 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
 
       {/* Judul INVOICE - Center (di atas) */}
       <div className="text-center mb-6">
-        <h1 className="text-5xl font-bold mb-4" style={{ color: primaryColor }}>INVOICE</h1>
+        <input
+          type="text"
+          value={data.invoiceLabel ?? 'INVOICE'}
+          onChange={(e) => updateField('invoiceLabel', e.target.value)}
+          onBlur={(e) => updateField('invoiceLabel', e.target.value.trim() || 'INVOICE')}
+          className="w-full bg-transparent text-center text-5xl font-bold mb-4 border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none"
+          style={{ color: primaryColor }}
+          aria-label="Invoice title"
+          placeholder={invoiceLabel}
+        />
       </div>
 
       {/* Invoice Number dan Date (Left-Right) */}

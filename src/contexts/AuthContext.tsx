@@ -109,8 +109,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function signInWithGoogle() {
+    const redirectTo = new URL('/', window.location.origin).toString();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
+      options: {
+        redirectTo,
+      },
     });
     if (error) throw error;
   }

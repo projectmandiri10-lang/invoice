@@ -82,11 +82,14 @@ corepack pnpm -v
 3. **Siapkan environment Supabase (wajib):**
 ```powershell
 Copy-Item .env.example .env.local
-# Edit .env.local dan isi:
+# Edit .env.local dan isi minimal:
 # VITE_SUPABASE_URL=...
 # VITE_SUPABASE_ANON_KEY=...
 ```
-> Catatan: jika `.env` sudah berisi value yang benar, langkah ini bisa dilewati.
+> Catatan:
+> - `.env` dipakai untuk nilai aman yang boleh ada di repo.
+> - Secret privat seperti `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ACCESS_TOKEN`, dan `DUITKU_API_KEY` simpan di `.env.local`, bukan di `.env`.
+> - Google OAuth dikonfigurasi di Supabase Auth provider, jadi tidak perlu `VITE_GOOGLE_CLIENT_SECRET` di frontend.
 
 4. **Jalankan dev server:**
 ```powershell
@@ -142,9 +145,22 @@ corepack pnpm build
 ### Environment Variables
 
 ```env
-VITE_SUPABASE_URL=your_supabase_url
+# Public client-side config
+VITE_SUPABASE_URL=https://your-project-ref.supabase.co
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+PUBLIC_SITE_URL=https://invoice.idcashier.com
+DUITKU_CALLBACK_URL=https://your-project-ref.supabase.co/functions/v1/duitku-callback
+
+# Private/server-only config (.env.local only)
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+SUPABASE_ACCESS_TOKEN=your_supabase_access_token
+DUITKU_MERCHANT_CODE=your_merchant_code
+DUITKU_API_KEY=your_duitku_api_key
+DUITKU_ENV=production
 ```
+
+`VITE_` variables boleh dibaca frontend. Variabel tanpa prefix `VITE_` jangan ditaruh di file yang ikut di-commit.
 
 ### Troubleshooting
 

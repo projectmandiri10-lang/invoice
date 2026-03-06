@@ -1,7 +1,7 @@
 import React from 'react';
 import { InvoiceData } from '@/types/document';
 import { DocumentSettings } from '@/components/SettingsPanel';
-import { formatCurrency, formatDate } from '@/lib/documentUtils';
+import { formatCurrency, formatDate, getInvoiceLabel } from '@/lib/documentUtils';
 
 interface InvoicePreviewProps {
   data: InvoiceData;
@@ -14,6 +14,7 @@ export default function InvoicePreview({ data, settings }: InvoicePreviewProps) 
   const fontSize = settings?.font.size || 14;
   const padding = settings?.layout.margin || 20;
   const spacing = settings?.layout.spacing || 16;
+  const invoiceLabel = getInvoiceLabel(data);
   const showDecimals = settings?.visibleFields.showDecimals ?? false;
   const showDueDate = settings?.visibleFields.dueDate ?? true;
   const showSubtotal = settings?.visibleFields.subtotal ?? true;
@@ -43,7 +44,7 @@ export default function InvoicePreview({ data, settings }: InvoicePreviewProps) 
                 style={{ maxHeight: '60px', maxWidth: '200px' }}
               />
             )}
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">INVOICE</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">{invoiceLabel}</h1>
           </div>
         </div>
         <div className="flex justify-between" style={{ marginTop: `${spacing}px` }}>

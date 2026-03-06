@@ -9,6 +9,7 @@ export interface InvoiceData {
   clientPhone?: string;
   clientEmail?: string;
   clientNPWP?: string;
+  invoiceLabel?: string;
   invoiceNumber: string;
   invoiceDate: string;
   dueDate: string;

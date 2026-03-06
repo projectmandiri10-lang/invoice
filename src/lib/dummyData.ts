@@ -17,6 +17,7 @@ export const dummyInvoiceData: InvoiceData = {
   clientPhone: '0812-3456-7890',
   clientEmail: 'pembelian@mitrausaha.co.id',
   clientNPWP: '09.876.543.2-109.000',
+  invoiceLabel: 'INVOICE',
   invoiceNumber: 'INV/2024/07/001',
   invoiceDate: new Date().toISOString().split('T')[0],
   dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],

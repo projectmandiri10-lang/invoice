@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import type { AppPlan } from '@/contexts/AuthContext';
+import type { InvoiceData } from '@/types/document';
 
 // Fungsi ini hanya digunakan untuk fallback jika diperlukan, bisa dihapus nanti.
 function cloneAndClean(element: HTMLElement): HTMLElement {
@@ -82,6 +83,11 @@ export function numberToWords(num: number): string {
   return num.toString();
 }
 
+export function getInvoiceLabel(invoiceData?: Pick<InvoiceData, 'invoiceLabel'> | null): string {
+  const label = invoiceData?.invoiceLabel?.trim();
+  return label || 'INVOICE';
+}
+
 // --- PDF Generation Functions ---
 
 export async function exportInvoiceToPDF(invoiceData: any, settings: any, userTier: AppPlan) {
@@ -117,7 +123,7 @@ export async function exportInvoiceToPDF(invoiceData: any, settings: any, userTi
 
   doc.setFontSize(22);
   doc.setTextColor(settings.colorScheme.primary);
-  doc.text('INVOICE', 105, 30, { align: 'center' });
+  doc.text(getInvoiceLabel(invoiceData), 105, 30, { align: 'center' });
 
   const startY = Math.max(logoBottomY + 10, 50);
   doc.setFontSize(10);
