@@ -1,14 +1,66 @@
 import React from 'react';
-import { InvoiceData } from '@/types/document';
 import { DocumentSettings } from '@/components/SettingsPanel';
+import { useI18n } from '@/contexts/I18nContext';
 import { formatCurrency, formatDate, getInvoiceLabel } from '@/lib/documentUtils';
+import { InvoiceData } from '@/types/document';
 
 interface InvoicePreviewProps {
   data: InvoiceData;
   settings?: DocumentSettings;
 }
 
+const copy = {
+  en: {
+    companyLogo: 'Company logo',
+    companyName: 'Company Name',
+    companyAddress: 'Company Address',
+    phone: 'Phone',
+    email: 'Email',
+    invoiceNumber: 'Invoice No.',
+    invoiceNumberPlaceholder: 'Invoice Number',
+    date: 'Date',
+    dueDate: 'Due Date',
+    clientName: 'Client Name',
+    clientAddress: 'Client Address',
+    description: 'Description',
+    unitPrice: 'Unit Price',
+    total: 'Total',
+    subtotal: 'Subtotal:',
+    discount: 'Discount:',
+    tax: 'Tax',
+    paymentInfo: 'Payment Information:',
+    notes: 'Notes:',
+    defaultNote: 'Thank you for your trust.',
+    regards: 'Regards,',
+  },
+  id: {
+    companyLogo: 'Logo perusahaan',
+    companyName: 'Nama Perusahaan',
+    companyAddress: 'Alamat Perusahaan',
+    phone: 'Telepon',
+    email: 'Email',
+    invoiceNumber: 'No. Invoice',
+    invoiceNumberPlaceholder: 'Nomor Invoice',
+    date: 'Tanggal',
+    dueDate: 'Jatuh Tempo',
+    clientName: 'Nama Klien',
+    clientAddress: 'Alamat Klien',
+    description: 'Deskripsi',
+    unitPrice: 'Harga Satuan',
+    total: 'Total',
+    subtotal: 'Subtotal:',
+    discount: 'Diskon:',
+    tax: 'Pajak',
+    paymentInfo: 'Informasi Pembayaran:',
+    notes: 'Catatan:',
+    defaultNote: 'Terima kasih atas kepercayaan Anda.',
+    regards: 'Hormat kami,',
+  },
+} as const;
+
 export default function InvoicePreview({ data, settings }: InvoicePreviewProps) {
+  const { locale } = useI18n();
+  const text = copy[locale];
   const primaryColor = settings?.colorScheme.primary || '#2563eb';
   const fontFamily = settings?.font.family || 'Arial';
   const fontSize = settings?.font.size || 14;
@@ -23,270 +75,135 @@ export default function InvoicePreview({ data, settings }: InvoicePreviewProps) 
   const showTotal = settings?.visibleFields.total ?? true;
 
   return (
-    <div 
-      id="invoice-preview" 
-      className="bg-white shadow-lg" 
-      style={{ 
+    <div
+      id="invoice-preview"
+      className="bg-white shadow-lg"
+      style={{
         minHeight: '297mm',
         fontFamily,
         fontSize: `${fontSize}px`,
-        padding: `${padding}px`
+        padding: `${padding}px`,
       }}
     >
-      <div className="pb-6 mb-6">
+      <div className="mb-6 pb-6">
         <div className="flex justify-between items-start">
           <div>
             {settings?.logoUrl && settings.visibleFields.logo && (
-              <img 
-                src={settings.logoUrl} 
-                alt="Company Logo" 
+              <img
+                src={settings.logoUrl}
+                alt={text.companyLogo}
                 className="mb-4"
                 style={{ maxHeight: '60px', maxWidth: '200px' }}
               />
             )}
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{invoiceLabel}</h1>
+            <h1 className="mb-2 text-3xl font-bold text-gray-900">{invoiceLabel}</h1>
           </div>
         </div>
+
         <div className="flex justify-between" style={{ marginTop: `${spacing}px` }}>
           <div>
-          <h2 
-            className="text-xl font-bold text-gray-900" 
-            style={{ 
-              color: data.companyName ? 'inherit' : '#9ca3af',
-              fontStyle: data.companyName ? 'normal' : 'italic',
-              opacity: data.companyName ? 1 : 0.7
-            }}
-          >
-            {data.companyName || 'Nama Perusahaan'}
-          </h2>
-          <p 
-            className="text-gray-600" 
-            style={{ 
-              color: data.companyAddress ? 'inherit' : '#9ca3af',
-              fontStyle: data.companyAddress ? 'normal' : 'italic',
-              opacity: data.companyAddress ? 1 : 0.7
-            }}
-          >
-            {data.companyAddress || 'Alamat Perusahaan'}
-          </p>
-          <p 
-            className="text-gray-600" 
-            style={{ 
-              color: data.companyPhone ? 'inherit' : '#9ca3af',
-              fontStyle: data.companyPhone ? 'normal' : 'italic',
-              opacity: data.companyPhone ? 1 : 0.7
-            }}
-          >
-            {data.companyPhone || 'Telepon'}
-          </p>
-          <p 
-            className="text-gray-600" 
-            style={{ 
-              color: data.companyEmail ? 'inherit' : '#9ca3af',
-              fontStyle: data.companyEmail ? 'normal' : 'italic',
-              opacity: data.companyEmail ? 1 : 0.7
-            }}
-          >
-            {data.companyEmail || 'Email'}
-          </p>
-          {data.companyNPWP && settings?.visibleFields.companyNPWP && (
-            <p 
-              className="text-gray-600" 
-              style={{ 
-                color: data.companyNPWP ? 'inherit' : '#9ca3af',
-                fontStyle: data.companyNPWP ? 'normal' : 'italic',
-                opacity: data.companyNPWP ? 1 : 0.7
-              }}
-            >
-              {data.companyNPWP || 'NPWP'}
-            </p>
-          )}
+            <h2 className="text-xl font-bold text-gray-900">{data.companyName || text.companyName}</h2>
+            <p className="text-gray-600">{data.companyAddress || text.companyAddress}</p>
+            <p className="text-gray-600">{data.companyPhone || text.phone}</p>
+            <p className="text-gray-600">{data.companyEmail || text.email}</p>
+            {data.companyNPWP && settings?.visibleFields.companyNPWP && <p className="text-gray-600">{data.companyNPWP}</p>}
           </div>
           <div className="text-right">
-            <p 
-              className="text-gray-600"
-              style={{ 
-                color: data.invoiceNumber ? 'inherit' : '#9ca3af',
-                fontStyle: data.invoiceNumber ? 'normal' : 'italic',
-                opacity: data.invoiceNumber ? 1 : 0.7
-              }}
-            >
-              <span className="font-semibold">No. Invoice:</span> {data.invoiceNumber || 'Nomor Invoice'}
+            <p className="text-gray-600">
+              <span className="font-semibold">{text.invoiceNumber}:</span> {data.invoiceNumber || text.invoiceNumberPlaceholder}
             </p>
-            <p 
-              className="text-gray-600"
-              style={{ 
-                color: data.invoiceDate ? 'inherit' : '#9ca3af',
-                fontStyle: data.invoiceDate ? 'normal' : 'italic',
-                opacity: data.invoiceDate ? 1 : 0.7
-              }}
-            >
-              <span className="font-semibold">Tanggal:</span> {data.invoiceDate ? formatDate(data.invoiceDate) : 'Tanggal'}
+            <p className="text-gray-600">
+              <span className="font-semibold">{text.date}:</span> {data.invoiceDate ? formatDate(data.invoiceDate, locale) : text.date}
             </p>
             {showDueDate && (
-              <p 
-                className="text-gray-600"
-                style={{ 
-                  color: data.dueDate ? 'inherit' : '#9ca3af',
-                  fontStyle: data.dueDate ? 'normal' : 'italic',
-                  opacity: data.dueDate ? 1 : 0.7
-                }}
-              >
-                <span className="font-semibold">Jatuh Tempo:</span> {data.dueDate ? formatDate(data.dueDate) : 'Jatuh Tempo'}
+              <p className="text-gray-600">
+                <span className="font-semibold">{text.dueDate}:</span> {data.dueDate ? formatDate(data.dueDate, locale) : text.dueDate}
               </p>
             )}
           </div>
         </div>
       </div>
 
-      <div style={{ marginBottom: `${spacing * 2}px` }}>
-        <h3 
-          className="text-lg font-semibold text-gray-900 mb-2" 
-          style={{ 
-            color: data.clientName ? 'inherit' : '#9ca3af',
-            fontStyle: data.clientName ? 'normal' : 'italic',
-            opacity: data.clientName ? 1 : 0.7
-          }}
-        >
-          Kepada:
-        </h3>
-        <p 
-          className="text-gray-900 font-medium" 
-          style={{ 
-            color: data.clientName ? 'inherit' : '#9ca3af',
-            fontStyle: data.clientName ? 'normal' : 'italic',
-            opacity: data.clientName ? 1 : 0.7
-          }}
-        >
-          {data.clientName || 'Nama Klien'}
-        </p>
-        <p 
-          className="text-gray-600" 
-          style={{ 
-            color: data.clientAddress ? 'inherit' : '#9ca3af',
-            fontStyle: data.clientAddress ? 'normal' : 'italic',
-            opacity: data.clientAddress ? 1 : 0.7
-          }}
-        >
-          {data.clientAddress || 'Alamat Klien'}
-        </p>
+      <div className="mb-8 rounded-lg border border-gray-300 p-4">
+        <h3 className="mb-2 text-lg font-semibold text-gray-900">{data.clientName || text.clientName}</h3>
+        <p className="text-gray-600">{data.clientAddress || text.clientAddress}</p>
+        {data.clientPhone && <p className="text-gray-600">{data.clientPhone}</p>}
+        {data.clientEmail && <p className="text-gray-600">{data.clientEmail}</p>}
+        {data.clientNPWP && <p className="text-gray-600">{data.clientNPWP}</p>}
       </div>
 
-      <table className="w-full" style={{ marginBottom: `${spacing * 2}px` }}>
+      <table className="mb-8 w-full border-collapse">
         <thead>
-          <tr style={{ backgroundColor: `${primaryColor}15` }}>
-            <th className="text-left p-3 border border-gray-300">Deskripsi</th>
-            <th className="text-center p-3 border border-gray-300">Qty</th>
-            <th className="text-right p-3 border border-gray-300">Harga Satuan</th>
-            <th className="text-right p-3 border border-gray-300">Total</th>
+          <tr style={{ backgroundColor: primaryColor, color: 'white' }}>
+            <th className="border border-gray-300 p-3 text-left">No</th>
+            <th className="border border-gray-300 p-3 text-left">{text.description}</th>
+            <th className="border border-gray-300 p-3 text-center">Qty</th>
+            <th className="border border-gray-300 p-3 text-right">{text.unitPrice}</th>
+            <th className="border border-gray-300 p-3 text-right">{text.total}</th>
           </tr>
         </thead>
         <tbody>
           {data.items.map((item, index) => (
             <tr key={index}>
-              <td className="p-3 border border-gray-300">{item.description}</td>
-              <td className="text-center p-3 border border-gray-300">{item.quantity}</td>
-              <td className="text-right p-3 border border-gray-300">{formatCurrency(item.unitPrice, showDecimals)}</td>
-              <td className="text-right p-3 border border-gray-300">{formatCurrency(item.total, showDecimals)}</td>
+              <td className="border border-gray-300 p-3">{index + 1}</td>
+              <td className="border border-gray-300 p-3">{item.description}</td>
+              <td className="border border-gray-300 p-3 text-center">{item.quantity}</td>
+              <td className="border border-gray-300 p-3 text-right">{formatCurrency(item.unitPrice, showDecimals, locale)}</td>
+              <td className="border border-gray-300 p-3 text-right">{formatCurrency(item.total, showDecimals, locale)}</td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      <div className="flex justify-end" style={{ marginBottom: `${spacing * 2}px` }}>
-        <div className="w-64">
-          {showSubtotal && (
-            <div className="flex justify-between py-2 border-b border-gray-300">
-              <span className="font-medium">Subtotal:</span>
-              <span>{formatCurrency(data.subtotal, showDecimals)}</span>
-            </div>
-          )}
-          {showDiscount && (
-            <div className="flex justify-between py-2 border-b border-gray-300">
-              <span className="font-medium">Diskon:</span>
-              <span>{formatCurrency(-(data.discount ?? 0), showDecimals)}</span>
-            </div>
-          )}
-          {showTax && (
-            <div className="flex justify-between py-2 border-b border-gray-300">
-              <span className="font-medium">Pajak ({data.taxPercentage}%):</span>
-              <span>{formatCurrency(data.tax, showDecimals)}</span>
-            </div>
-          )}
-          {showTotal && (
-            <div className="flex justify-between py-3" style={{ borderBottom: `2px solid ${primaryColor}` }}>
-              <span className="font-bold text-lg" style={{ color: primaryColor }}>Total:</span>
-              <span className="font-bold text-lg" style={{ color: primaryColor }}>{formatCurrency(data.total, showDecimals)}</span>
-            </div>
-          )}
-        </div>
+      <div className="mb-8 ml-auto w-full max-w-sm">
+        {showSubtotal && (
+          <div className="flex items-center justify-between border-b border-gray-300 py-2">
+            <span className="font-medium">{text.subtotal}</span>
+            <span>{formatCurrency(data.subtotal, showDecimals, locale)}</span>
+          </div>
+        )}
+        {showDiscount && (
+          <div className="flex items-center justify-between border-b border-gray-300 py-2">
+            <span className="font-medium">{text.discount}</span>
+            <span>{formatCurrency(-(data.discount || 0), showDecimals, locale)}</span>
+          </div>
+        )}
+        {showTax && (
+          <div className="flex items-center justify-between border-b border-gray-300 py-2">
+            <span className="font-medium">{text.tax} ({data.taxPercentage}%):</span>
+            <span>{formatCurrency(data.tax, showDecimals, locale)}</span>
+          </div>
+        )}
+        {showTotal && (
+          <div className="flex justify-between py-3" style={{ borderBottom: `2px solid ${primaryColor}` }}>
+            <span className="text-lg font-bold" style={{ color: primaryColor }}>
+              {text.total}:
+            </span>
+            <span className="text-lg font-bold" style={{ color: primaryColor }}>
+              {formatCurrency(data.total, showDecimals, locale)}
+            </span>
+          </div>
+        )}
       </div>
 
-      {settings?.visibleFields.paymentInfo && (
-        <div className="mb-6 p-4 bg-gray-50 rounded">
-          <h4 className="font-semibold text-gray-900 mb-2">Informasi Pembayaran:</h4>
-          <p 
-            className="text-gray-700"
-            style={{ 
-              color: data.paymentInfo ? 'inherit' : '#9ca3af',
-              fontStyle: data.paymentInfo ? 'normal' : 'italic',
-              opacity: data.paymentInfo ? 1 : 0.7
-            }}
-          >
-            {data.paymentInfo || 'Transfer ke: Bank BCA - No. Rek: xxxx-xxxx-xxxx'}
-          </p>
+      {settings?.visibleFields.paymentInfo && data.paymentInfo && (
+        <div className="mb-6">
+          <h4 className="mb-2 font-semibold text-gray-900">{text.paymentInfo}</h4>
+          <p className="whitespace-pre-wrap text-gray-600">{data.paymentInfo}</p>
         </div>
       )}
 
       {settings?.visibleFields.notes && (
-        <div className="mb-6">
-          <h4 className="font-semibold text-gray-900 mb-2">Catatan:</h4>
-          <p 
-            className="text-gray-700"
-            style={{ 
-              color: data.notes ? 'inherit' : '#9ca3af',
-              fontStyle: data.notes ? 'normal' : 'italic',
-              opacity: data.notes ? 1 : 0.7
-            }}
-          >
-            {data.notes || 'Terima kasih atas kepercayaan Anda.'}
-          </p>
+        <div className="mb-12">
+          <h4 className="mb-2 font-semibold text-gray-900">{text.notes}</h4>
+          <p className="whitespace-pre-wrap text-gray-600">{data.notes || text.defaultNote}</p>
         </div>
       )}
 
-      {/* Signature Section */}
-      <div className="mt-16 mb-8">
-        <div className="flex justify-end">
-          <div className="w-72 text-center">
-            <p className="mb-2 text-gray-700 text-left">Hormat kami,</p>
-            {/* Ruang kosong untuk tanda tangan manual */}
-            <div style={{ height: '100px' }}></div>
-            {/* Nama dan Jabatan dengan garis di tengah */}
-            <div className="pb-2">
-              <p 
-                className="text-center font-semibold text-gray-900"
-                style={{ 
-                  color: data.signatureName ? 'inherit' : '#9ca3af',
-                  fontStyle: data.signatureName ? 'normal' : 'italic',
-                  opacity: data.signatureName ? 1 : 0.7
-                }}
-              >
-                {data.signatureName || '________________'}
-              </p>
-              <div className="border-t-2 border-gray-900 pt-1 mb-2"></div>
-              <p 
-                className="text-center text-gray-600"
-                style={{ 
-                  color: data.signatureTitle ? 'inherit' : '#9ca3af',
-                  fontStyle: data.signatureTitle ? 'normal' : 'italic',
-                  opacity: data.signatureTitle ? 1 : 0.7
-                }}
-              >
-                {data.signatureTitle || 'Jabatan'}
-              </p>
-            </div>
-          </div>
-        </div>
+      <div className="ml-auto w-56 text-left">
+        <p className="mb-2 text-gray-700">{text.regards}</p>
+        <div className="mt-16 border-b border-gray-400 pb-1">{data.signatureName || ''}</div>
+        <p className="mt-2 text-gray-600">{data.signatureTitle || ''}</p>
       </div>
     </div>
   );

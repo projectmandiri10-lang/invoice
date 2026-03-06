@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useI18n } from '@/contexts/I18nContext';
 import { supabase } from '@/lib/supabase';
 import Navbar from '@/components/Navbar';
 import SettingsPanel, { defaultSettings, DocumentSettings } from '@/components/SettingsPanel';
@@ -8,6 +9,14 @@ import { InvoiceData, SuratJalanData, KwitansiData, DocumentType } from '@/types
 import { dummyInvoiceData, dummySuratJalanData, dummyKwitansiData } from '@/lib/dummyData';
 import { exportInvoiceToPDF, exportSuratJalanToPDF, exportKwitansiToPDF } from '@/lib/documentUtils';
 import { consumePdfExportQuota } from '@/lib/pdfExportQuota';
+import {
+  CLIENT_LIMITS,
+  DOCUMENT_LIMITS,
+  formatCurrency,
+  getDocumentTypeLabel,
+  getLocaleTag,
+  type Locale,
+} from '@/lib/i18n';
 import { FileDown, Save, FileText, Truck, Receipt, Check, AlertCircle, WifiOff, Repeat } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 import HilltopAds from '@/components/HilltopAds';
@@ -18,8 +27,122 @@ const EditableSuratJalanPreview = lazy(() => import('@/components/EditableSuratJ
 const EditableKwitansiPreview = lazy(() => import('@/components/EditableKwitansiPreview'));
 const RecurringInvoiceModal = lazy(() => import('@/components/RecurringInvoiceModal'));
 
+const copy = {
+  en: {
+    recurringSaved: 'Recurring invoice scheduled successfully.',
+    recurringSaveFailed: 'Failed to save recurring schedule.',
+    recurringSaveFailedTitle: 'Failed to save schedule',
+    templateFailed: 'Failed to load templates from Supabase.',
+    templateFallback:
+      'Using local templates. Check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env.local.',
+    documentLimitFreeTitle: 'Free document limit reached',
+    documentLimitFreeDescription: 'Upgrade to Starter for up to 100 saved documents.',
+    documentLimitStarterTitle: 'Starter document limit reached',
+    documentLimitStarterDescription: 'Upgrade to Pro for unlimited saved documents.',
+    clientCheckFailed: 'Failed to check client data.',
+    clientCountFailed: 'Failed to check client count.',
+    clientLimitStarterTitle: 'Starter client limit reached',
+    clientLimitStarterDescription: 'Upgrade to Pro for unlimited clients and client management.',
+    clientLimitFreeTitle: 'Free client limit reached',
+    clientLimitFreeDescription: 'Upgrade to Starter for up to 25 clients.',
+    loginRequired: 'Sign in required',
+    loginRequiredDescription: 'You must sign in to save documents.',
+    saveUpdated: 'Document updated successfully.',
+    saveUpdatedDescription: (title: string) => `${title} has been updated.`,
+    saveSaved: 'Document saved successfully.',
+    saveSavedDescription: (title: string) => `${title} has been saved.`,
+    offlineSaveTitle: 'Cannot save while offline',
+    offlineSaveDescription: 'Check your connection and try again.',
+    autosaveOfflineDescription: 'Changes will be saved automatically when your connection returns.',
+    autosaveFailed: 'Auto-save failed',
+    saveFailed: 'Failed to save document',
+    exportLimitTitle: 'PDF export limit reached',
+    exportLimitAnonymous: 'You can export PDF up to 5 times without an account. Sign in and upgrade to Starter for unlimited exports.',
+    exportLimitFree: 'Free plan can export PDF up to 5 times. Upgrade to Starter for unlimited exports.',
+    exportFailed: 'Failed to export PDF',
+    sampleLoaded: 'Sample data loaded successfully.',
+    heading: 'idCashier Invoice Generator',
+    subheading: 'Create and manage your business documents with ease',
+    loadSample: 'Load Sample Data',
+    autoSaving: 'Saving automatically...',
+    saved: 'Saved',
+    saveRetry: 'Save failed — click Save to try again',
+    loadingPreview: 'Loading preview...',
+    saveBannerTitle: 'Save your documents',
+    saveBannerTextStart: 'Sign in',
+    saveBannerTextMiddle: 'or',
+    saveBannerTextAction: 'register',
+    saveBannerTextEnd: 'to save your work and access it later.',
+    proFeature: 'Pro feature',
+    proFeatureDescription: 'Invoice payment button is available on the Pro plan.',
+    upgrade: 'Upgrade',
+    login: 'Sign in',
+    exportPdf: 'Export PDF',
+    saveDocument: 'Save Document',
+    saving: 'Saving...',
+    saveErrorMessage: 'No data to save',
+  },
+  id: {
+    recurringSaved: 'Invoice berulang berhasil dijadwalkan.',
+    recurringSaveFailed: 'Gagal menyimpan jadwal berulang.',
+    recurringSaveFailedTitle: 'Gagal menyimpan jadwal',
+    templateFailed: 'Gagal memuat template dari Supabase.',
+    templateFallback:
+      'Menggunakan template lokal. Periksa VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY di .env.local.',
+    documentLimitFreeTitle: 'Batas dokumen Free tercapai',
+    documentLimitFreeDescription: 'Upgrade ke Starter untuk hingga 100 dokumen tersimpan.',
+    documentLimitStarterTitle: 'Batas dokumen Starter tercapai',
+    documentLimitStarterDescription: 'Upgrade ke Pro untuk dokumen tersimpan tanpa batas.',
+    clientCheckFailed: 'Gagal memeriksa data klien.',
+    clientCountFailed: 'Gagal memeriksa jumlah klien.',
+    clientLimitStarterTitle: 'Batas klien Starter tercapai',
+    clientLimitStarterDescription: 'Upgrade ke Pro untuk klien tanpa batas dan manajemen klien.',
+    clientLimitFreeTitle: 'Batas klien Free tercapai',
+    clientLimitFreeDescription: 'Upgrade ke Starter untuk hingga 25 klien.',
+    loginRequired: 'Login diperlukan',
+    loginRequiredDescription: 'Anda harus login untuk menyimpan dokumen.',
+    saveUpdated: 'Dokumen berhasil diperbarui.',
+    saveUpdatedDescription: (title: string) => `${title} telah diperbarui.`,
+    saveSaved: 'Dokumen berhasil disimpan.',
+    saveSavedDescription: (title: string) => `${title} telah disimpan.`,
+    offlineSaveTitle: 'Tidak dapat menyimpan saat offline',
+    offlineSaveDescription: 'Periksa koneksi internet Anda dan coba lagi.',
+    autosaveOfflineDescription: 'Perubahan akan disimpan otomatis setelah koneksi kembali.',
+    autosaveFailed: 'Gagal menyimpan otomatis',
+    saveFailed: 'Gagal menyimpan dokumen',
+    exportLimitTitle: 'Batas export PDF tercapai',
+    exportLimitAnonymous: 'Maksimal 5 kali export PDF untuk pengguna tanpa akun. Silakan login dan upgrade ke Starter untuk unlimited.',
+    exportLimitFree: 'Paket Free maksimal 5 kali export PDF. Upgrade ke Starter untuk unlimited.',
+    exportFailed: 'Gagal export PDF',
+    sampleLoaded: 'Contoh data berhasil dimuat.',
+    heading: 'idCashier Invoice Generator',
+    subheading: 'Buat dan kelola dokumen bisnis Anda dengan mudah',
+    loadSample: 'Isi Contoh Data',
+    autoSaving: 'Menyimpan otomatis...',
+    saved: 'Tersimpan',
+    saveRetry: 'Gagal menyimpan — klik tombol Simpan untuk coba lagi',
+    loadingPreview: 'Memuat preview...',
+    saveBannerTitle: 'Simpan dokumen Anda',
+    saveBannerTextStart: 'Masuk',
+    saveBannerTextMiddle: 'atau',
+    saveBannerTextAction: 'daftar',
+    saveBannerTextEnd: 'untuk menyimpan pekerjaan Anda dan mengaksesnya nanti.',
+    proFeature: 'Fitur Pro',
+    proFeatureDescription: 'Tombol bayar invoice tersedia di paket Pro.',
+    upgrade: 'Upgrade',
+    login: 'Masuk',
+    exportPdf: 'Export PDF',
+    saveDocument: 'Simpan Dokumen',
+    saving: 'Menyimpan...',
+    saveErrorMessage: 'Tidak ada data untuk disimpan',
+  },
+} as const;
+
 export default function HomePage() {
   const { user, effectivePlan } = useAuth();
+  const { locale } = useI18n();
+  const text = copy[locale];
+  const localeTag = getLocaleTag(locale);
   const location = useLocation();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<DocumentType>('invoice');
@@ -34,6 +157,8 @@ export default function HomePage() {
   const [saveError, setSaveError] = useState(false);
   const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null);
   const [isRecurringModalOpen, setIsRecurringModalOpen] = useState(false);
+  const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null);
+  const [currentDocumentType, setCurrentDocumentType] = useState<DocumentType | null>(null);
   const autoSaveTimerRef = useRef<NodeJS.Timeout>();
   const hasShownTemplateLoadErrorRef = useRef(false);
 
@@ -63,10 +188,27 @@ export default function HomePage() {
 
   const userTier = effectivePlan;
 
+  const getDocumentTitle = useCallback(
+    (documentType: DocumentType, content: InvoiceData | SuratJalanData | KwitansiData) => {
+      if (documentType === 'invoice') {
+        return `${getDocumentTypeLabel('invoice', locale)} ${(content as InvoiceData).invoiceNumber}`;
+      }
+      if (documentType === 'surat_jalan') {
+        return `${getDocumentTypeLabel('surat_jalan', locale)} ${(content as SuratJalanData).suratJalanNumber}`;
+      }
+      return `${getDocumentTypeLabel('kwitansi', locale)} ${(content as KwitansiData).kwitansiNumber}`;
+    },
+    [locale]
+  );
+  const starterMonthlyPrice = `${formatCurrency(100000, false, locale)}${locale === 'id' ? '/bulan' : '/month'}`;
+  const proMonthlyPrice = `${formatCurrency(150000, false, locale)}${locale === 'id' ? '/bulan' : '/month'}`;
+
   useEffect(() => {
     const docToLoad = location.state?.documentToLoad;
     if (docToLoad) {
-      const { document_type, content, settings } = docToLoad;
+      const { id, document_type, content, settings } = docToLoad;
+      setCurrentDocumentId(id || null);
+      setCurrentDocumentType(document_type);
       setActiveTab(document_type);
       setSettings(normalizeSettings(settings));
       
@@ -79,25 +221,25 @@ export default function HomePage() {
       }
       setLoading(false);
     } else {
+      setCurrentDocumentId(null);
+      setCurrentDocumentType(null);
       loadTemplates();
     }
   }, [location.state]);
 
   // Auto-save functionality with debounce and error handling
   const autoSave = useCallback(async () => {
-    if (!user) return;
+    if (!user || !currentDocumentId || currentDocumentType !== activeTab) return;
 
     setAutoSaving(true);
     setSaveError(false);
 
     try {
       let content;
-      let title;
       let clientId: string | null = null;
 
       if (activeTab === 'invoice' && invoiceData) {
         content = invoiceData;
-        title = `Invoice ${invoiceData.invoiceNumber}`;
 
         const clientName = invoiceData.clientName?.trim();
         if (clientName) {
@@ -112,58 +254,28 @@ export default function HomePage() {
         }
       } else if (activeTab === 'surat_jalan' && suratJalanData) {
         content = suratJalanData;
-        title = `Surat Jalan ${suratJalanData.suratJalanNumber}`;
       } else if (activeTab === 'kwitansi' && kwitansiData) {
         content = kwitansiData;
-        title = `Kwitansi ${kwitansiData.kwitansiNumber}`;
       } else {
         return;
       }
 
-      // Check if document with this title exists
-      const { data: existing, error: fetchError } = await supabase
-        .from('documents')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('title', title)
-        .maybeSingle();
-
-      if (fetchError) throw fetchError;
-
-      if (existing) {
-        // Update existing
-        const updatePayload: Record<string, unknown> = {
-          content,
-          settings,
-          updated_at: new Date().toISOString(),
-        };
-        if (activeTab === 'invoice') {
-          updatePayload.client_id = clientId;
-        }
-        const { error: updateError } = await supabase
-          .from('documents')
-          .update(updatePayload)
-          .eq('id', existing.id);
-
-        if (updateError) throw updateError;
-      } else {
-        // Insert new
-        const insertPayload: Record<string, unknown> = {
-          user_id: user.id,
-          title,
-          document_type: activeTab,
-          content,
-          settings,
-        };
-        if (activeTab === 'invoice') {
-          insertPayload.client_id = clientId;
-        }
-        const { error: insertError } = await supabase
-          .from('documents')
-          .insert(insertPayload);
-
-        if (insertError) throw insertError;
+      const updatePayload: Record<string, unknown> = {
+        title: getDocumentTitle(activeTab, content as InvoiceData | SuratJalanData | KwitansiData),
+        content,
+        settings,
+        updated_at: new Date().toISOString(),
+      };
+      if (activeTab === 'invoice') {
+        updatePayload.client_id = clientId;
       }
+      const { error: updateError } = await supabase
+        .from('documents')
+        .update(updatePayload)
+        .eq('id', currentDocumentId)
+        .eq('user_id', user.id);
+
+      if (updateError) throw updateError;
 
       // Success
       setLastSaveTime(new Date());
@@ -173,22 +285,36 @@ export default function HomePage() {
       setSaveError(true);
       
       if (!navigator.onLine) {
-        toast.error('Tidak dapat menyimpan - Anda sedang offline', {
-          description: 'Perubahan akan disimpan otomatis setelah koneksi kembali',
+        toast.error(text.offlineSaveTitle, {
+          description: text.autosaveOfflineDescription,
           icon: <WifiOff className="h-4 w-4" />,
           duration: 5000,
         });
       } else {
-        toast.error('Gagal menyimpan otomatis', {
-          description: error.message || 'Terjadi kesalahan saat menyimpan. Silakan coba simpan manual.',
+        toast.error(text.autosaveFailed, {
+          description: error.message || text.saveFailed,
           icon: <AlertCircle className="h-4 w-4" />,
           duration: 5000,
         });
       }
     } finally {
       setAutoSaving(false);
-        }
-  }, [user, activeTab, invoiceData, suratJalanData, kwitansiData, settings]);
+    }
+  }, [
+    user,
+    currentDocumentId,
+    currentDocumentType,
+    activeTab,
+    invoiceData,
+    suratJalanData,
+    kwitansiData,
+    settings,
+    getDocumentTitle,
+    text.offlineSaveTitle,
+    text.autosaveOfflineDescription,
+    text.autosaveFailed,
+    text.saveFailed,
+  ]);
 
   const handleLogoChange = (logoUrl: string) => {
     setSettings(prev => ({
@@ -217,8 +343,8 @@ export default function HomePage() {
 
   const handleSaveRecurring = async (settings: any) => {
     if (!user || !invoiceData) {
-      toast.error('Gagal menyimpan jadwal', {
-        description: 'Pastikan Anda masuk dan invoice sudah lengkap.',
+      toast.error(text.recurringSaveFailedTitle, {
+        description: text.loginRequiredDescription,
       });
       return;
     }
@@ -241,10 +367,10 @@ export default function HomePage() {
 
       if (error) throw error;
 
-      toast.success('Invoice berulang berhasil dijadwalkan!');
+      toast.success(text.recurringSaved);
     } catch (err: any) {
       console.error('Error saving recurring invoice:', err);
-      toast.error('Gagal menyimpan jadwal berulang.', {
+      toast.error(text.recurringSaveFailed, {
         description: err.message,
       });
     }
@@ -295,17 +421,20 @@ export default function HomePage() {
       setInvoiceData(loadedInvoice ?? dummyInvoiceData);
       setSuratJalanData(loadedSuratJalan ?? dummySuratJalanData);
       setKwitansiData(loadedKwitansi ?? dummyKwitansiData);
+      setCurrentDocumentId(null);
+      setCurrentDocumentType(null);
     } catch (error) {
       console.error('Error loading templates:', error);
       setInvoiceData(dummyInvoiceData);
       setSuratJalanData(dummySuratJalanData);
       setKwitansiData(dummyKwitansiData);
+      setCurrentDocumentId(null);
+      setCurrentDocumentType(null);
 
       if (!hasShownTemplateLoadErrorRef.current) {
         hasShownTemplateLoadErrorRef.current = true;
-        toast.warning('Gagal memuat template dari Supabase.', {
-          description:
-            'Menggunakan template lokal. Periksa VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY di .env.local.',
+        toast.warning(text.templateFailed, {
+          description: text.templateFallback,
         });
       }
     } finally {
@@ -314,54 +443,36 @@ export default function HomePage() {
   };
 
   const checkDocumentLimit = async (): Promise<boolean> => {
-    if (!user || userTier !== 'free') {
-      return true; // No limit for paid users or logged out users
-    }
-
-    const oneMonthAgo = new Date();
-    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    if (!user) return true;
+    const limit = DOCUMENT_LIMITS[userTier];
+    if (limit === null) return true;
 
     const { count, error } = await supabase
       .from('documents')
       .select('id', { count: 'exact' })
-      .eq('user_id', user.id)
-      .gte('created_at', oneMonthAgo.toISOString());
+      .eq('user_id', user.id);
 
     if (error) {
       console.error('Error fetching document count:', error);
-      toast.error('Gagal memeriksa batas dokumen.');
+      toast.error(text.saveFailed);
       return false;
     }
 
-
-
-
-
-
-
-
-
-
-        const isIndonesia = navigator.language.startsWith('id');
-    const starterPrice = isIndonesia ? 'Rp 100.000/bulan' : '$5/month';
-
-    if (count !== null && count >= 5) {
-      toast.error(
-        isIndonesia ? 'Batas 5 Dokumen Gratis Tercapai' : 'Free Document Limit Reached', 
-        {
-          description: isIndonesia 
-            ? `Upgrade ke Starter (${starterPrice}) untuk dokumen tak terbatas.`
-            : `Upgrade to Starter (${starterPrice}) for unlimited documents.`,
-          action: {
-            label: 'Upgrade',
-            onClick: () => navigate('/billing', { state: { planCode: 'starter_month' } }),
-          },
-        }
-      );
+    if (count !== null && count >= limit) {
+      const isStarter = userTier === 'starter';
+      toast.error(isStarter ? text.documentLimitStarterTitle : text.documentLimitFreeTitle, {
+        description: isStarter
+          ? `${text.documentLimitStarterDescription} (${proMonthlyPrice})`
+          : `${text.documentLimitFreeDescription} (${starterMonthlyPrice})`,
+        action: {
+          label: text.upgrade,
+          onClick: () => navigate('/billing', { state: { planCode: isStarter ? 'pro_month' : 'starter_month' } }),
+        },
+      });
       return false;
     }
 
-        return true;
+    return true;
   };
 
   const checkClientLimit = async (clientName: string): Promise<boolean> => {
@@ -370,9 +481,8 @@ export default function HomePage() {
     const normalizedClientName = clientName.trim();
     if (!normalizedClientName) return true;
 
-    if (userTier === 'pro') return true;
-
-    const limit = userTier === 'starter' ? 25 : 3;
+    const limit = CLIENT_LIMITS[userTier];
+    if (limit === null) return true;
 
     // Check if client already exists
     const { data: existingClient, error: fetchClientError } = await supabase
@@ -384,7 +494,7 @@ export default function HomePage() {
 
     if (fetchClientError) {
       console.error('Error fetching client:', fetchClientError);
-      toast.error('Gagal memeriksa data klien.');
+      toast.error(text.clientCheckFailed);
       return false; // Fail safe
     }
 
@@ -400,41 +510,24 @@ export default function HomePage() {
 
     if (countError) {
       console.error('Error fetching client count:', countError);
-      toast.error('Gagal memeriksa jumlah klien.');
+      toast.error(text.clientCountFailed);
       return false; // Fail safe
     }
 
-
-
-
-
-
-
-
-
-
-    const isIndonesia = navigator.language.startsWith('id');
-    const starterPrice = isIndonesia ? 'Rp 100.000/bulan' : '$5/month';
-    const proPrice = isIndonesia ? 'Rp 150.000/bulan' : '$15/month';
-
     if (count !== null && count >= limit) {
       if (userTier === 'starter') {
-        toast.error(isIndonesia ? 'Batas 25 Klien Starter Tercapai' : 'Starter Client Limit Reached', {
-          description: isIndonesia
-            ? `Upgrade ke Pro (${proPrice}) untuk klien tak terbatas dan manajemen klien.`
-            : `Upgrade to Pro (${proPrice}) for unlimited clients and client management.`,
+        toast.error(text.clientLimitStarterTitle, {
+          description: `${text.clientLimitStarterDescription} (${proMonthlyPrice})`,
           action: {
-            label: 'Upgrade',
+            label: text.upgrade,
             onClick: () => navigate('/billing', { state: { planCode: 'pro_month' } }),
           },
         });
       } else {
-        toast.error(isIndonesia ? 'Batas 3 Klien Gratis Tercapai' : 'Free Client Limit Reached', {
-          description: isIndonesia
-            ? `Upgrade ke Starter (${starterPrice}) untuk hingga 25 klien.`
-            : `Upgrade to Starter (${starterPrice}) for up to 25 clients.`,
+        toast.error(text.clientLimitFreeTitle, {
+          description: `${text.clientLimitFreeDescription} (${starterMonthlyPrice})`,
           action: {
-            label: 'Upgrade',
+            label: text.upgrade,
             onClick: () => navigate('/billing', { state: { planCode: 'starter_month' } }),
           },
         });
@@ -448,8 +541,8 @@ export default function HomePage() {
 
     const handleSave = async () => {
     if (!user) {
-      toast.error('Login diperlukan', {
-        description: 'Anda harus login untuk menyimpan dokumen',
+      toast.error(text.loginRequired, {
+        description: text.loginRequiredDescription,
       });
       return;
     }
@@ -462,38 +555,30 @@ export default function HomePage() {
       let title;
       let clientName: string | undefined;
       let clientId: string | null = null;
+      const isExistingDocument = Boolean(currentDocumentId) && currentDocumentType === activeTab;
 
       if (activeTab === 'invoice' && invoiceData) {
         content = invoiceData;
-        title = `Invoice ${invoiceData.invoiceNumber}`;
+        title = getDocumentTitle(activeTab, invoiceData);
         clientName = invoiceData.clientName;
       } else if (activeTab === 'surat_jalan' && suratJalanData) {
         content = suratJalanData;
-        title = `Surat Jalan ${suratJalanData.suratJalanNumber}`;
+        title = getDocumentTitle(activeTab, suratJalanData);
         clientName = suratJalanData.recipientName;
       } else if (activeTab === 'kwitansi' && kwitansiData) {
         content = kwitansiData;
-        title = `Kwitansi ${kwitansiData.kwitansiNumber}`;
+        title = getDocumentTitle(activeTab, kwitansiData);
         clientName = kwitansiData.receivedFrom;
       } else {
-        throw new Error('No data to save');
+        throw new Error(text.saveErrorMessage);
       }
       
       if (!navigator.onLine) {
         throw new Error('OFFLINE');
       }
 
-      const { data: existing, error: fetchError } = await supabase
-        .from('documents')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('title', title)
-        .maybeSingle();
-
-      if (fetchError) throw fetchError;
-      
       // Only check limits for brand new documents
-      if (!existing) {
+      if (!isExistingDocument) {
         const canSave = await checkDocumentLimit();
         if (!canSave) {
           setSaving(false);
@@ -522,8 +607,9 @@ export default function HomePage() {
         }
       }
 
-      if (existing) {
+      if (isExistingDocument && currentDocumentId) {
         const updatePayload: Record<string, unknown> = {
+          title,
           content,
           settings,
           updated_at: new Date().toISOString(),
@@ -534,14 +620,16 @@ export default function HomePage() {
         const { error } = await supabase
           .from('documents')
           .update(updatePayload)
-          .eq('id', existing.id);
+          .eq('id', currentDocumentId)
+          .eq('user_id', user.id);
 
         if (error) throw error;
         
-        toast.success('Dokumen berhasil diperbarui!', {
-          description: `${title} telah diperbarui`,
+        toast.success(text.saveUpdated, {
+          description: text.saveUpdatedDescription(title),
         });
-        setSaveMessage('Dokumen berhasil diperbarui!');
+        setSaveMessage(text.saveUpdated);
+        setCurrentDocumentType(activeTab);
       } else {
         const insertPayload: Record<string, unknown> = {
           user_id: user.id,
@@ -553,16 +641,20 @@ export default function HomePage() {
         if (activeTab === 'invoice') {
           insertPayload.client_id = clientId;
         }
-        const { error } = await supabase
+        const { data: insertedDocument, error } = await supabase
           .from('documents')
-          .insert(insertPayload);
+          .insert(insertPayload)
+          .select('id')
+          .single();
 
         if (error) throw error;
 
-        toast.success('Dokumen berhasil disimpan!', {
-          description: `${title} telah disimpan`,
+        toast.success(text.saveSaved, {
+          description: text.saveSavedDescription(title),
         });
-        setSaveMessage('Dokumen berhasil disimpan!');
+        setSaveMessage(text.saveSaved);
+        setCurrentDocumentId(insertedDocument?.id || null);
+        setCurrentDocumentType(activeTab);
       }
 
       setLastSaveTime(new Date());
@@ -571,13 +663,13 @@ export default function HomePage() {
       console.error('Error saving document:', error);
       
       if (error.message === 'OFFLINE') {
-        toast.error('Tidak dapat menyimpan - Anda sedang offline', {
-          description: 'Periksa koneksi internet Anda dan coba lagi',
+        toast.error(text.offlineSaveTitle, {
+          description: text.offlineSaveDescription,
           icon: <WifiOff className="h-4 w-4" />,
         });
       } else {
-        toast.error('Gagal menyimpan dokumen', {
-          description: error.message || 'Terjadi kesalahan. Silakan coba lagi.',
+        toast.error(text.saveFailed, {
+          description: error.message || text.saveFailed,
           icon: <AlertCircle className="h-4 w-4" />,
         });
       }
@@ -591,17 +683,17 @@ export default function HomePage() {
       const quota = await consumePdfExportQuota(user, userTier);
       if (!quota.allowed) {
         const isAnonymous = !user;
-        toast.error('Batas Export PDF (5x) Tercapai', {
+        toast.error(text.exportLimitTitle, {
           description: isAnonymous
-            ? 'Maksimal 5 kali export PDF untuk pengguna tanpa akun. Silakan login & upgrade ke Starter untuk unlimited.'
-            : 'Maksimal 5 kali export PDF untuk paket Free. Upgrade ke Starter untuk unlimited.',
+            ? text.exportLimitAnonymous
+            : text.exportLimitFree,
           action: isAnonymous
             ? {
-                label: 'Login',
+                label: text.login,
                 onClick: () => navigate('/login'),
               }
             : {
-                label: 'Upgrade',
+                label: text.upgrade,
                 onClick: () => navigate('/billing', { state: { planCode: 'starter_month' } }),
               },
         });
@@ -611,17 +703,17 @@ export default function HomePage() {
       switch (activeTab) {
         case 'invoice':
           if (invoiceData) {
-            await exportInvoiceToPDF(invoiceData, settings, userTier);
+            await exportInvoiceToPDF(invoiceData, settings, userTier, locale);
           }
           break;
         case 'surat_jalan':
           if (suratJalanData) {
-            await exportSuratJalanToPDF(suratJalanData, settings, userTier);
+            await exportSuratJalanToPDF(suratJalanData, settings, userTier, locale);
           }
           break;
         case 'kwitansi':
           if (kwitansiData) {
-            await exportKwitansiToPDF(kwitansiData, settings, userTier);
+            await exportKwitansiToPDF(kwitansiData, settings, userTier, locale);
           }
           break;
         default:
@@ -629,8 +721,8 @@ export default function HomePage() {
       }
     } catch (error) {
       console.error('Error exporting PDF:', error);
-      toast.error('Gagal export PDF', {
-        description: error instanceof Error ? error.message : 'Terjadi kesalahan yang tidak diketahui.',
+      toast.error(text.exportFailed, {
+        description: error instanceof Error ? error.message : text.exportFailed,
       });
     }
   };
@@ -647,7 +739,9 @@ export default function HomePage() {
         setKwitansiData(dummyKwitansiData);
         break;
     }
-    toast.success('Contoh data berhasil dimuat!');
+    setCurrentDocumentId(null);
+    setCurrentDocumentType(null);
+    toast.success(text.sampleLoaded);
   };
 
   if (loading) {
@@ -655,7 +749,7 @@ export default function HomePage() {
       <div className="min-h-screen bg-gray-50">
         <Navbar />
         <div className="flex items-center justify-center h-screen">
-          <div className="text-xl text-gray-600">Memuat...</div>
+          <div className="text-xl text-gray-600">{text.loadingPreview}</div>
         </div>
       </div>
     );
@@ -668,8 +762,8 @@ export default function HomePage() {
 
         <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">idCashier Invoice Generator</h1>
-            <p className="text-gray-600">Buat dan kelola dokumen bisnis Anda dengan mudah</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">{text.heading}</h1>
+            <p className="text-gray-600">{text.subheading}</p>
           </div>
 
           <div className="bg-white rounded-lg shadow-lg p-6">
@@ -683,7 +777,7 @@ export default function HomePage() {
                 }`}
               >
                 <FileText className="h-5 w-5" />
-                <span>Invoice</span>
+                <span>{getDocumentTypeLabel('invoice', locale)}</span>
               </button>
               <button
                 onClick={() => setActiveTab('surat_jalan')}
@@ -694,7 +788,7 @@ export default function HomePage() {
                 }`}
               >
                 <Truck className="h-5 w-5" />
-                <span>Surat Jalan</span>
+                <span>{getDocumentTypeLabel('surat_jalan', locale)}</span>
               </button>
               <button
                 onClick={() => setActiveTab('kwitansi')}
@@ -705,13 +799,13 @@ export default function HomePage() {
                 }`}
               >
                 <Receipt className="h-5 w-5" />
-                <span>Kwitansi</span>
+                <span>{getDocumentTypeLabel('kwitansi', locale)}</span>
               </button>
               <button
                 onClick={handleDummyData}
                 className="ml-6 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm"
               >
-                Isi Contoh Data
+                {text.loadSample}
               </button>
             </div>
 
@@ -720,17 +814,17 @@ export default function HomePage() {
                 {user && autoSaving && (
                   <div className="flex items-center space-x-2 text-gray-600">
                     <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
-                    <span className="text-sm">Menyimpan otomatis...</span>
+                    <span className="text-sm">{text.autoSaving}</span>
                   </div>
                 )}
                 {user && !autoSaving && !saveError && (
                   <div className="flex items-center space-x-2 text-green-600">
                     <Check className="h-4 w-4" />
                     <span className="text-sm">
-                      Tersimpan
+                      {text.saved}
                       {lastSaveTime && (
                         <span className="text-gray-500 ml-1">
-                          • {new Date(lastSaveTime).toLocaleTimeString('id-ID', { 
+                          • {new Date(lastSaveTime).toLocaleTimeString(localeTag, { 
                             hour: '2-digit', 
                             minute: '2-digit' 
                           })}
@@ -742,7 +836,7 @@ export default function HomePage() {
                 {user && !autoSaving && saveError && (
                   <div className="flex items-center space-x-2 text-red-600">
                     <AlertCircle className="h-4 w-4" />
-                    <span className="text-sm">Gagal menyimpan - klik tombol Simpan untuk coba lagi</span>
+                    <span className="text-sm">{text.saveRetry}</span>
                   </div>
                 )}
               </div>
@@ -761,7 +855,7 @@ export default function HomePage() {
                     <div className="flex items-center justify-center h-full min-h-[400px]">
                       <div className="text-center">
                         <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-2"></div>
-                        <p className="text-gray-600">Memuat preview...</p>
+                        <p className="text-gray-600">{text.loadingPreview}</p>
                       </div>
                     </div>
                   }>
@@ -799,17 +893,17 @@ export default function HomePage() {
                 {!user && (
                   <div className="rounded-xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 via-yellow-50 to-orange-50 p-6 text-center shadow-lg">
                     <p className="text-2xl font-extrabold tracking-tight text-amber-900">
-                      Simpan Dokumen Anda!
+                      {text.saveBannerTitle}
                     </p>
                     <p className="mt-2 text-lg font-semibold text-amber-800">
                       <Link to="/login" className="font-bold underline decoration-2 underline-offset-4 hover:text-amber-950">
-                        Masuk
+                        {text.saveBannerTextStart}
                       </Link>{' '}
-                      atau{' '}
+                      {text.saveBannerTextMiddle}{' '}
                       <Link to="/register" className="font-bold underline decoration-2 underline-offset-4 hover:text-amber-950">
-                        daftar
+                        {text.saveBannerTextAction}
                       </Link>{' '}
-                      untuk menyimpan pekerjaan Anda dan mengaksesnya nanti.
+                      {text.saveBannerTextEnd}
                     </p>
                   </div>
                 )}
@@ -821,10 +915,10 @@ export default function HomePage() {
                   onChange={setSettings}
                   effectivePlan={userTier}
                   onRequestUpgradePro={() => {
-                    toast.info('Fitur Pro', {
-                      description: 'Tombol bayar invoice tersedia di paket Pro.',
+                    toast.info(text.proFeature, {
+                      description: text.proFeatureDescription,
                       action: {
-                        label: 'Upgrade',
+                        label: text.upgrade,
                         onClick: () => navigate('/billing', { state: { planCode: 'pro_month' } }),
                       },
                     });
@@ -836,7 +930,7 @@ export default function HomePage() {
             {userTier === 'free' && (
               <div className="mt-6">
                 <div className="bg-gray-200 rounded-lg p-4 text-center">
-                  <p className="font-semibold text-gray-700 mb-2">Iklan</p>
+                  <p className="font-semibold text-gray-700 mb-2">{locale === 'id' ? 'Iklan' : 'Ads'}</p>
                   <HilltopAds className="flex justify-center" />
                 </div>
               </div>
@@ -848,7 +942,7 @@ export default function HomePage() {
                 className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <FileDown className="h-5 w-5" />
-                <span>Export PDF</span>
+                <span>{text.exportPdf}</span>
               </button>
               {user && (
                 <button
@@ -857,7 +951,7 @@ export default function HomePage() {
                   className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
                 >
                   <Save className="h-5 w-5" />
-                  <span>{saving ? 'Menyimpan...' : 'Simpan Dokumen'}</span>
+                  <span>{saving ? text.saving : text.saveDocument}</span>
                 </button>
               )}
               {user && activeTab === 'invoice' && userTier === 'pro' && (
@@ -866,7 +960,7 @@ export default function HomePage() {
                   className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
                 >
                   <Repeat className="h-5 w-5" />
-                  <span>Atur Berulang</span>
+                  <span>{locale === 'id' ? 'Atur Berulang' : 'Recurring'}</span>
                 </button>
               )}
             </div>

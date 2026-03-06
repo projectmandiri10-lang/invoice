@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-import Navbar from '@/components/Navbar';
-import { Plus, Link as LinkIcon, Clipboard, Users } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Link as LinkIcon, Users } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
+import Navbar from '@/components/Navbar';
+import { useAuth } from '@/contexts/AuthContext';
+import { useI18n } from '@/contexts/I18nContext';
+import { supabase } from '@/lib/supabase';
 
 interface Client {
   id: string;
@@ -11,8 +12,47 @@ interface Client {
   portal_token: string;
 }
 
+const copy = {
+  en: {
+    title: 'Client Management',
+    list: 'Client list',
+    addNew: 'Add new client',
+    loading: 'Loading...',
+    empty: 'You do not have any clients yet. Add your first client to get started.',
+    copyLink: 'Copy link',
+    copyTitle: 'Copy client portal link',
+    addButton: 'Add client',
+    clientName: 'Client name',
+    clientNamePlaceholder: 'PT Example Client',
+    loadFailed: 'Failed to load clients.',
+    createFailed: 'Failed to add client.',
+    createFailedDescription: 'The client name may already exist.',
+    created: 'New client added successfully.',
+    copied: 'Client portal link copied to clipboard.',
+  },
+  id: {
+    title: 'Manajemen Klien',
+    list: 'Daftar klien',
+    addNew: 'Tambah klien baru',
+    loading: 'Memuat...',
+    empty: 'Anda belum memiliki klien. Tambahkan klien pertama untuk memulai.',
+    copyLink: 'Salin tautan',
+    copyTitle: 'Salin tautan portal klien',
+    addButton: 'Tambah klien',
+    clientName: 'Nama klien',
+    clientNamePlaceholder: 'PT Contoh Klien',
+    loadFailed: 'Gagal memuat daftar klien.',
+    createFailed: 'Gagal menambahkan klien.',
+    createFailedDescription: 'Mungkin nama klien sudah ada.',
+    created: 'Klien baru berhasil ditambahkan.',
+    copied: 'Tautan portal klien disalin ke clipboard.',
+  },
+} as const;
+
 export default function ClientsPage() {
   const { user } = useAuth();
+  const { locale } = useI18n();
+  const text = copy[locale];
   const [clients, setClients] = useState<Client[]>([]);
   const [newClientName, setNewClientName] = useState('');
   const [loading, setLoading] = useState(true);
@@ -34,15 +74,15 @@ export default function ClientsPage() {
 
     if (error) {
       console.error('Error fetching clients:', error);
-      toast.error('Gagal memuat daftar klien.');
+      toast.error(text.loadFailed);
     } else if (data) {
       setClients(data);
     }
     setLoading(false);
   };
 
-  const handleAddClient = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAddClient = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (!user || !newClientName.trim()) return;
 
     const { data, error } = await supabase
@@ -53,52 +93,52 @@ export default function ClientsPage() {
 
     if (error) {
       console.error('Error adding client:', error);
-      toast.error('Gagal menambahkan klien.', { description: 'Mungkin nama klien sudah ada.' });
+      toast.error(text.createFailed, { description: text.createFailedDescription });
     } else if (data) {
       setClients([...clients, data]);
       setNewClientName('');
-      toast.success('Klien baru berhasil ditambahkan.');
+      toast.success(text.created);
     }
   };
-  
-  const copyPortalLink = (token: string) => {
+
+  const copyPortalLink = async (token: string) => {
     const link = `${window.location.origin}/portal/${token}`;
-    navigator.clipboard.writeText(link);
-    toast.success('Tautan portal klien disalin ke clipboard!');
+    await navigator.clipboard.writeText(link);
+    toast.success(text.copied);
   };
 
   return (
     <>
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center">
+        <div className="mx-auto max-w-7xl px-4 py-8">
+          <div className="mb-6 flex items-center justify-between">
+            <h1 className="flex items-center text-3xl font-bold text-gray-900">
               <Users className="mr-3 text-blue-600" />
-              Manajemen Klien
+              {text.title}
             </h1>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             <div className="md:col-span-2">
-              <div className="bg-white rounded-lg shadow-lg p-6">
-                <h2 className="text-xl font-semibold mb-4">Daftar Klien</h2>
+              <div className="rounded-lg bg-white p-6 shadow-lg">
+                <h2 className="mb-4 text-xl font-semibold">{text.list}</h2>
                 {loading ? (
-                  <p>Memuat...</p>
+                  <p>{text.loading}</p>
                 ) : clients.length === 0 ? (
-                  <p className="text-gray-500">Anda belum memiliki klien. Tambahkan klien baru untuk memulai.</p>
+                  <p className="text-gray-500">{text.empty}</p>
                 ) : (
                   <ul className="space-y-3">
-                    {clients.map(client => (
-                      <li key={client.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    {clients.map((client) => (
+                      <li key={client.id} className="flex items-center justify-between rounded-lg bg-gray-50 p-3">
                         <span className="font-medium">{client.client_name}</span>
-                        <button 
+                        <button
                           onClick={() => copyPortalLink(client.portal_token)}
-                          className="flex items-center space-x-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors text-sm"
-                          title="Salin Tautan Portal Klien"
+                          className="flex items-center space-x-2 rounded-md bg-blue-100 px-3 py-1 text-sm text-blue-700 transition-colors hover:bg-blue-200"
+                          title={text.copyTitle}
                         >
                           <LinkIcon size={16} />
-                          <span>Salin Tautan</span>
+                          <span>{text.copyLink}</span>
                         </button>
                       </li>
                     ))}
@@ -108,29 +148,27 @@ export default function ClientsPage() {
             </div>
 
             <div>
-              <div className="bg-white rounded-lg shadow-lg p-6">
-                <h2 className="text-xl font-semibold mb-4">Tambah Klien Baru</h2>
+              <div className="rounded-lg bg-white p-6 shadow-lg">
+                <h2 className="mb-4 text-xl font-semibold">{text.addNew}</h2>
                 <form onSubmit={handleAddClient} className="space-y-4">
                   <div>
-                    <label htmlFor="clientName" className="block text-sm font-medium text-gray-700 mb-2">
-                      Nama Klien
+                    <label htmlFor="clientName" className="mb-2 block text-sm font-medium text-gray-700">
+                      {text.clientName}
                     </label>
                     <input
                       id="clientName"
                       type="text"
                       value={newClientName}
-                      onChange={(e) => setNewClientName(e.target.value)}
-                      required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      placeholder="Contoh: PT. Jaya Abadi"
+                      onChange={(event) => setNewClientName(event.target.value)}
+                      placeholder={text.clientNamePlaceholder}
+                      className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                   <button
                     type="submit"
-                    className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center"
+                    className="w-full rounded-lg bg-blue-600 px-4 py-3 text-white transition-colors hover:bg-blue-700"
                   >
-                    <Plus size={20} className="mr-2" />
-                    Tambah Klien
+                    {text.addButton}
                   </button>
                 </form>
               </div>

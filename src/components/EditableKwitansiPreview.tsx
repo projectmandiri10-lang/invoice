@@ -1,8 +1,9 @@
 import React from 'react';
-import { KwitansiData } from '@/types/document';
-import { DocumentSettings } from '@/components/SettingsPanel';
-import { formatCurrency, formatDate, numberToWords } from '@/lib/documentUtils';
 import LogoUpload from '@/components/LogoUpload';
+import { DocumentSettings } from '@/components/SettingsPanel';
+import { useI18n } from '@/contexts/I18nContext';
+import { formatCurrency, formatDate, numberToWords } from '@/lib/documentUtils';
+import { KwitansiData } from '@/types/document';
 import type { AppPlan } from '@/contexts/AuthContext';
 
 interface EditableKwitansiPreviewProps {
@@ -13,8 +14,53 @@ interface EditableKwitansiPreviewProps {
   userTier: AppPlan;
 }
 
-export default function EditableKwitansiPreview({ data, settings, onChange, onSettingsChange, userTier }: EditableKwitansiPreviewProps) {
-  const amountWords = data.amount > 0 ? numberToWords(data.amount) + ' rupiah' : '';
+const copy = {
+  en: {
+    title: 'RECEIPT',
+    companyName: 'Company Name',
+    companyAddress: 'Company Address',
+    date: 'Date:',
+    receivedFrom: 'Received from',
+    payerName: 'Payer Name',
+    amount: 'Amount',
+    amountInWords: 'Amount in words',
+    forPayment: 'For payment',
+    paymentMethod: 'Payment method',
+    receiver: 'Receiver,',
+    receiverName: 'Receiver Name',
+    receiverTitle: 'Receiver Title',
+    zeroAmount: 'Rp 0',
+    moneySuffix: 'rupiah',
+  },
+  id: {
+    title: 'KWITANSI',
+    companyName: 'Nama Perusahaan',
+    companyAddress: 'Alamat Perusahaan',
+    date: 'Tanggal:',
+    receivedFrom: 'Sudah terima dari',
+    payerName: 'Nama Pembayar',
+    amount: 'Uang sejumlah',
+    amountInWords: 'Terbilang',
+    forPayment: 'Untuk pembayaran',
+    paymentMethod: 'Metode Pembayaran',
+    receiver: 'Penerima,',
+    receiverName: 'Nama Penerima',
+    receiverTitle: 'Jabatan',
+    zeroAmount: 'Rp 0',
+    moneySuffix: 'rupiah',
+  },
+} as const;
+
+export default function EditableKwitansiPreview({
+  data,
+  settings,
+  onChange,
+  onSettingsChange,
+  userTier,
+}: EditableKwitansiPreviewProps) {
+  const { locale } = useI18n();
+  const text = copy[locale];
+  const amountWords = data.amount > 0 ? `${numberToWords(data.amount, locale)} ${text.moneySuffix}` : '';
   const primaryColor = settings?.colorScheme.accent || '#9333ea';
   const fontFamily = settings?.font.family || 'Arial';
   const fontSize = settings?.font.size || 14;
@@ -26,55 +72,42 @@ export default function EditableKwitansiPreview({ data, settings, onChange, onSe
   };
 
   const handleLogoChange = (logoUrl: string) => {
-    if (onSettingsChange && settings) {
-      onSettingsChange({
-        ...settings,
-        logoUrl
-      });
-    }
+    if (!onSettingsChange || !settings) return;
+    onSettingsChange({ ...settings, logoUrl });
   };
 
   return (
-    <div 
-      id="kwitansi-preview" 
-      className="bg-white shadow-lg" 
-      style={{ 
+    <div
+      id="kwitansi-preview"
+      className="bg-white shadow-lg"
+      style={{
         minHeight: '297mm',
         fontFamily,
         fontSize: `${fontSize}px`,
-        padding: `${padding}px`
+        padding: `${padding}px`,
       }}
     >
       <div className="p-8">
-        {/* Logo Upload di pojok kiri atas */}
-        <div className="flex justify-between items-start mb-6">
+        <div className="mb-6 flex items-start justify-between">
           <div className="w-1/3">
-            <LogoUpload 
-              logoUrl={settings?.logoUrl} 
-              onLogoChange={handleLogoChange} 
-              userTier={userTier}
-            />
+            <LogoUpload logoUrl={settings?.logoUrl} onLogoChange={handleLogoChange} userTier={userTier} />
           </div>
-          <div className="text-center flex-1">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2" style={{ color: primaryColor }}>
-              KWITANSI
+          <div className="flex-1 text-center">
+            <h1 className="text-4xl font-bold text-gray-900" style={{ color: primaryColor }}>
+              {text.title}
             </h1>
           </div>
-          <div className="w-1/3"></div>
+          <div className="w-1/3" />
         </div>
-        
-        <div className="text-right pb-6 mb-6">
+
+        <div className="mb-6 text-right">
           <div className="flex items-center justify-end">
-            <span className="text-lg text-gray-600 mr-2">No.</span>
+            <span className="mr-2 text-lg text-gray-600">No.</span>
             <input
               type="text"
               value={data.kwitansiNumber}
-              onChange={(e) => updateField('kwitansiNumber', e.target.value)}
-              className="text-lg text-gray-600 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-purple-500 focus:outline-none text-center w-32"
-              placeholder="KWT-001"
-              onFocus={(e) => e.target.value === 'KWT-001' && updateField('kwitansiNumber', '')}
-              onBlur={(e) => e.target.value === '' && updateField('kwitansiNumber', 'KWT-001')}
-              style={{ color: data.kwitansiNumber === 'KWT-001' ? '#9ca3af' : 'inherit' }}
+              onChange={(event) => updateField('kwitansiNumber', event.target.value)}
+              className="w-32 border-b border-transparent bg-transparent text-center text-lg text-gray-600 focus:border-purple-500 focus:outline-none"
             />
           </div>
         </div>
@@ -83,166 +116,103 @@ export default function EditableKwitansiPreview({ data, settings, onChange, onSe
           <input
             type="text"
             value={data.companyName}
-            onChange={(e) => updateField('companyName', e.target.value)}
-            className="text-xl font-bold text-gray-900 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-purple-500 focus:outline-none w-full mb-2"
-            placeholder="Nama Perusahaan"
-            onFocus={(e) => e.target.value === 'Nama Perusahaan' && updateField('companyName', '')}
-            onBlur={(e) => e.target.value === '' && updateField('companyName', 'Nama Perusahaan')}
-            style={{ color: data.companyName === 'Nama Perusahaan' ? '#9ca3af' : 'inherit' }}
+            onChange={(event) => updateField('companyName', event.target.value)}
+            className="mb-2 w-full border-b border-transparent bg-transparent text-xl font-bold text-gray-900 focus:border-purple-500 focus:outline-none"
+            placeholder={text.companyName}
           />
           <textarea
             value={data.companyAddress}
-            onChange={(e) => updateField('companyAddress', e.target.value)}
-            className="text-gray-600 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-purple-500 focus:outline-none w-full resize-none"
-            placeholder="Alamat Perusahaan"
+            onChange={(event) => updateField('companyAddress', event.target.value)}
+            className="w-full resize-none border-b border-transparent bg-transparent text-gray-600 focus:border-purple-500 focus:outline-none"
+            placeholder={text.companyAddress}
             rows={2}
-            onFocus={(e) => e.target.value === 'Alamat Perusahaan' && updateField('companyAddress', '')}
-            onBlur={(e) => e.target.value === '' && updateField('companyAddress', 'Alamat Perusahaan')}
-            style={{ color: data.companyAddress === 'Alamat Perusahaan' ? '#9ca3af' : 'inherit' }}
           />
         </div>
 
         <div style={{ marginBottom: `${spacing}px` }}>
-          <div className="flex items-center mb-1">
-            <span className="font-semibold text-gray-900 mr-2">Tanggal:</span>
+          <div className="mb-1 flex items-center">
+            <span className="mr-2 font-semibold text-gray-900">{text.date}</span>
             <input
               type="date"
               value={data.kwitansiDate}
-              onChange={(e) => updateField('kwitansiDate', e.target.value)}
-              className="text-gray-600 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-purple-500 focus:outline-none"
+              onChange={(event) => updateField('kwitansiDate', event.target.value)}
+              className="border-b border-transparent bg-transparent focus:border-purple-500 focus:outline-none"
             />
           </div>
         </div>
 
         <div className="space-y-4" style={{ marginBottom: `${spacing * 2}px` }}>
-          <div className="grid grid-cols-[12rem_0.75rem_1fr] items-center gap-x-2">
-            <span className="font-semibold text-gray-900">Sudah terima dari</span>
+          <div className="grid grid-cols-[12rem_0.75rem_1fr] items-baseline gap-x-2">
+            <span className="font-semibold text-gray-900">{text.receivedFrom}</span>
             <span className="font-semibold text-gray-900">:</span>
             <input
               type="text"
               value={data.receivedFrom}
-              onChange={(e) => updateField('receivedFrom', e.target.value)}
-              className="border-b border-gray-400 bg-transparent focus:outline-none focus:border-purple-500 px-2"
-              placeholder="Nama Pembayar"
-              onFocus={(e) => e.target.value === 'Nama Pembayar' && updateField('receivedFrom', '')}
-              onBlur={(e) => e.target.value === '' && updateField('receivedFrom', 'Nama Pembayar')}
-              style={{ color: data.receivedFrom === 'Nama Pembayar' ? '#9ca3af' : 'inherit' }}
+              onChange={(event) => updateField('receivedFrom', event.target.value)}
+              className="border-b border-gray-400 bg-transparent focus:outline-none"
+              placeholder={text.payerName}
             />
           </div>
 
-          <div className="grid grid-cols-[12rem_0.75rem_1fr] items-center gap-x-2">
-            <span className="font-semibold text-gray-900">Jumlah</span>
-            <span className="font-semibold text-gray-900">:</span>
-            <div className="border-b border-gray-400 px-2 py-1 font-bold text-lg" style={{ color: primaryColor }}>
-              {formatCurrency(data.amount, settings?.visibleFields.showDecimals)}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-[12rem_0.75rem_1fr] items-center gap-x-2">
-            <span className="font-semibold text-gray-900">Uang sejumlah (input)</span>
+          <div className="grid grid-cols-[12rem_0.75rem_1fr] items-baseline gap-x-2">
+            <span className="font-semibold text-gray-900">{text.amount}</span>
             <span className="font-semibold text-gray-900">:</span>
             <input
               type="number"
               value={data.amount}
-              onChange={(e) => {
-                const value = e.target.value;
-                const parsedValue = value === '' ? 0 : parseFloat(value);
-                if (!isNaN(parsedValue)) {
-                  updateField('amount', parsedValue);
-                }
-              }}
-              className="border-b border-gray-400 bg-transparent focus:outline-none focus:border-purple-500 px-2"
-              placeholder="0"
-              step={settings?.visibleFields.showDecimals ? "0.01" : "1"}
+              onChange={(event) => updateField('amount', parseFloat(event.target.value) || 0)}
+              className="border-b border-gray-400 bg-transparent focus:outline-none"
+              placeholder={text.zeroAmount}
             />
           </div>
 
-          <div className="grid grid-cols-[12rem_0.75rem_1fr] items-center gap-x-2">
-            <span className="font-semibold text-gray-900">Terbilang</span>
+          <div className="grid grid-cols-[12rem_0.75rem_1fr] items-baseline gap-x-2">
+            <span className="font-semibold text-gray-900">{text.amountInWords}</span>
             <span className="font-semibold text-gray-900">:</span>
-            <input
-              type="text"
-              value={data.amountInWords}
-              onChange={(e) => updateField('amountInWords', e.target.value)}
-              className="border-b border-gray-400 bg-transparent focus:outline-none focus:border-purple-500 px-2 italic capitalize"
-              placeholder={amountWords || "terbilang (auto-generate dari jumlah)"}
-            />
+            <span className="border-b border-gray-400">{amountWords}</span>
           </div>
 
-          <div className="grid grid-cols-[12rem_0.75rem_1fr] items-center gap-x-2">
-            <span className="font-semibold text-gray-900">Untuk pembayaran</span>
+          <div className="grid grid-cols-[12rem_0.75rem_1fr] items-baseline gap-x-2">
+            <span className="font-semibold text-gray-900">{text.forPayment}</span>
             <span className="font-semibold text-gray-900">:</span>
-            <input
-              type="text"
+            <textarea
               value={data.description}
-              onChange={(e) => updateField('description', e.target.value)}
-              className="border-b border-gray-400 bg-transparent focus:outline-none focus:border-purple-500 px-2"
-              placeholder="Deskripsi pembayaran"
+              onChange={(event) => updateField('description', event.target.value)}
+              className="resize-none border-b border-gray-400 bg-transparent focus:outline-none"
+              rows={2}
             />
           </div>
 
-          <div className="grid grid-cols-[12rem_0.75rem_1fr] items-center gap-x-2">
-            <span className="font-semibold text-gray-900">Metode Pembayaran</span>
+          <div className="grid grid-cols-[12rem_0.75rem_1fr] items-baseline gap-x-2">
+            <span className="font-semibold text-gray-900">{text.paymentMethod}</span>
             <span className="font-semibold text-gray-900">:</span>
             <input
               type="text"
               value={data.paymentMethod}
-              onChange={(e) => updateField('paymentMethod', e.target.value)}
-              className="border-b border-gray-400 bg-transparent focus:outline-none focus:border-purple-500 px-2"
-              placeholder="Tunai/Transfer"
-              onFocus={(e) => e.target.value === 'Tunai/Transfer' && updateField('paymentMethod', '')}
-              onBlur={(e) => e.target.value === '' && updateField('paymentMethod', 'Tunai/Transfer')}
-              style={{ color: data.paymentMethod === 'Tunai/Transfer' ? '#9ca3af' : 'inherit' }}
+              onChange={(event) => updateField('paymentMethod', event.target.value)}
+              className="border-b border-gray-400 bg-transparent focus:outline-none"
             />
           </div>
         </div>
 
-        {settings?.visibleFields.notes && (
-          <div className="mb-8 p-4 bg-gray-50 rounded">
-            <h4 className="font-semibold text-gray-900 mb-2">Catatan:</h4>
-            <textarea
-              value={data.notes}
-              onChange={(e) => updateField('notes', e.target.value)}
-              className="w-full text-gray-700 bg-transparent border border-transparent hover:border-gray-300 focus:border-purple-500 focus:outline-none resize-none p-2 rounded"
-              placeholder="Catatan tambahan..."
-              rows={2}
-              onFocus={(e) => e.target.value === 'Catatan tambahan...' && updateField('notes', '')}
-              onBlur={(e) => e.target.value === '' && updateField('notes', 'Catatan tambahan...')}
-              style={{ color: data.notes === 'Catatan tambahan...' ? '#9ca3af' : 'inherit' }}
-            />
-          </div>
-        )}
-
-        <div className="flex justify-end mt-12">
-          <div className="text-center w-64 flex flex-col items-center">
-            <p className="mb-16">Penerima,</p>
-            <div className="w-48 flex flex-col items-center">
-              <input
-                type="text"
-                value={data.receiverName}
-                onChange={(e) => updateField('receiverName', e.target.value)}
-                className="font-semibold text-gray-900 px-8 pt-2 bg-transparent border-b-2 border-gray-900 focus:outline-none text-center w-full"
-                placeholder="Nama Penerima"
-                onFocus={(e) => e.target.value === 'Nama Penerima' && updateField('receiverName', '')}
-                onBlur={(e) => e.target.value === '' && updateField('receiverName', 'Nama Penerima')}
-                style={{ color: data.receiverName === 'Nama Penerima' ? '#9ca3af' : 'inherit' }}
-              />
-              <input
-                type="text"
-                value={data.receiverPosition}
-                onChange={(e) => updateField('receiverPosition', e.target.value)}
-                className="w-full text-center text-gray-600 text-sm mt-1 bg-transparent focus:outline-none"
-                placeholder="Jabatan"
-                onFocus={(e) => e.target.value === 'Jabatan' && updateField('receiverPosition', '')}
-                onBlur={(e) => e.target.value === '' && updateField('receiverPosition', 'Jabatan')}
-                style={{ color: data.receiverPosition === 'Jabatan' ? '#9ca3af' : 'inherit' }}
-              />
-            </div>
-          </div>
+        <div className="mt-20 text-right">
+          <p className="mb-16">{text.receiver}</p>
+          <input
+            type="text"
+            value={data.receiverName}
+            onChange={(event) => updateField('receiverName', event.target.value)}
+            className="ml-auto block w-56 border-b border-gray-400 bg-transparent text-center focus:outline-none"
+            placeholder={text.receiverName}
+          />
+          <input
+            type="text"
+            value={data.receiverPosition}
+            onChange={(event) => updateField('receiverPosition', event.target.value)}
+            className="ml-auto mt-2 block w-56 border-b border-transparent bg-transparent text-center text-gray-600 focus:border-purple-500 focus:outline-none"
+            placeholder={text.receiverTitle}
+          />
         </div>
-
       </div>
-
     </div>
   );
 }

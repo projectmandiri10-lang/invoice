@@ -2,8 +2,8 @@ import React from 'react';
 import { X, CreditCard, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { invokeEdgeFunction } from '@/lib/edgeFunctions';
-
-type BillingPlanCode = 'starter_month' | 'starter_year' | 'pro_month' | 'pro_year';
+import { useI18n } from '@/contexts/I18nContext';
+import { formatCurrency, getBillingPlanLabel, type BillingPlanCode } from '@/lib/i18n';
 
 type PaymentMethod = {
   paymentMethod: string;
@@ -25,12 +25,38 @@ type CreateBillingTxResponse = {
   reused?: boolean;
 };
 
-const planLabel: Record<BillingPlanCode, string> = {
-  starter_month: 'Starter • Bulanan (Rp 100.000)',
-  starter_year: 'Starter • Tahunan (Rp 1.000.000)',
-  pro_month: 'Pro • Bulanan (Rp 150.000)',
-  pro_year: 'Pro • Tahunan (Rp 1.500.000)',
-};
+const copy = {
+  en: {
+    title: 'Upgrade / Renew',
+    close: 'Close',
+    plan: 'Plan',
+    amount: 'Plan amount',
+    paymentMethod: 'Payment method',
+    loadingMethods: 'Loading payment methods...',
+    noMethods: 'No payment methods are available right now.',
+    startPayment: 'Continue to payment',
+    creating: 'Creating transaction...',
+    selectMethod: 'Select a payment method first',
+    loadFailed: 'Failed to load payment methods',
+    createFailed: 'Failed to create transaction',
+    fee: 'Fee',
+  },
+  id: {
+    title: 'Upgrade / Perpanjang',
+    close: 'Tutup',
+    plan: 'Paket',
+    amount: 'Nominal paket',
+    paymentMethod: 'Metode pembayaran',
+    loadingMethods: 'Memuat metode pembayaran...',
+    noMethods: 'Belum ada metode pembayaran yang tersedia.',
+    startPayment: 'Lanjut ke pembayaran',
+    creating: 'Membuat transaksi...',
+    selectMethod: 'Pilih metode pembayaran terlebih dulu',
+    loadFailed: 'Gagal memuat metode pembayaran',
+    createFailed: 'Gagal membuat transaksi',
+    fee: 'Biaya',
+  },
+} as const;
 
 export default function UpgradeModal({
   isOpen,
@@ -41,6 +67,8 @@ export default function UpgradeModal({
   onClose: () => void;
   defaultPlanCode?: BillingPlanCode;
 }) {
+  const { locale } = useI18n();
+  const text = copy[locale];
   const [planCode, setPlanCode] = React.useState<BillingPlanCode>(defaultPlanCode);
   const [loadingMethods, setLoadingMethods] = React.useState(false);
   const [methods, setMethods] = React.useState<PaymentMethod[]>([]);
@@ -68,7 +96,7 @@ export default function UpgradeModal({
         setMethods(res.methods || []);
       } catch (err: any) {
         if (cancelled) return;
-        toast.error('Gagal memuat metode pembayaran', { description: err?.message || String(err) });
+        toast.error(text.loadFailed, { description: err?.message || String(err) });
       } finally {
         if (!cancelled) setLoadingMethods(false);
       }
@@ -78,11 +106,11 @@ export default function UpgradeModal({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, planCode]);
+  }, [isOpen, planCode, text.loadFailed]);
 
   const startPayment = async () => {
     if (!paymentMethod) {
-      toast.error('Pilih metode pembayaran terlebih dulu');
+      toast.error(text.selectMethod);
       return;
     }
 
@@ -94,7 +122,7 @@ export default function UpgradeModal({
       });
       window.location.href = res.paymentUrl;
     } catch (err: any) {
-      toast.error('Gagal membuat transaksi', { description: err?.message || String(err) });
+      toast.error(text.createFailed, { description: err?.message || String(err) });
       setCreating(false);
     }
   };
@@ -107,96 +135,110 @@ export default function UpgradeModal({
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div className="flex items-center gap-2">
             <CreditCard className="h-5 w-5 text-blue-600" />
-            <h2 className="text-lg font-bold text-gray-900">Upgrade / Perpanjang</h2>
+            <h2 className="text-lg font-bold text-gray-900">{text.title}</h2>
           </div>
-          <button onClick={onClose} className="rounded p-2 hover:bg-gray-100" aria-label="Tutup">
+          <button onClick={onClose} className="rounded p-2 hover:bg-gray-100" aria-label={text.close}>
             <X className="h-5 w-5" />
           </button>
         </div>
 
         <div className="space-y-4 px-6 py-5">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Paket</label>
+            <label className="mb-2 block text-sm font-semibold text-gray-700">{text.plan}</label>
             <select
               value={planCode}
-              onChange={(e) => setPlanCode(e.target.value as BillingPlanCode)}
+              onChange={(event) => setPlanCode(event.target.value as BillingPlanCode)}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
               disabled={creating}
             >
-              {Object.entries(planLabel).map(([code, label]) => (
+              {(['starter_month', 'starter_year', 'pro_month', 'pro_year'] as BillingPlanCode[]).map((code) => (
                 <option key={code} value={code}>
-                  {label}
+                  {getBillingPlanLabel(code, locale)}
                 </option>
               ))}
             </select>
             {amountIdr > 0 && (
               <p className="mt-1 text-xs text-gray-500">
-                Nominal paket: <span className="font-semibold">Rp {amountIdr.toLocaleString('id-ID')}</span>
+                {text.amount}: <span className="font-semibold">{formatCurrency(amountIdr, false, locale)}</span>
               </p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Metode Pembayaran</label>
+            <label className="mb-2 block text-sm font-semibold text-gray-700">{text.paymentMethod}</label>
             {loadingMethods ? (
-              <div className="flex items-center gap-2 text-gray-600">
+              <div className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-3 text-sm text-gray-600">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Memuat metode...</span>
+                <span>{text.loadingMethods}</span>
               </div>
             ) : methods.length === 0 ? (
-              <p className="text-sm text-gray-600">Metode pembayaran belum tersedia.</p>
+              <div className="rounded-lg border border-dashed border-gray-300 px-3 py-3 text-sm text-gray-500">
+                {text.noMethods}
+              </div>
             ) : (
-              <div className="max-h-64 overflow-auto rounded-lg border border-gray-200">
-                {methods.map((m) => (
-                  <label
-                    key={m.paymentMethod}
-                    className="flex cursor-pointer items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0 hover:bg-gray-50"
-                  >
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        value={m.paymentMethod}
-                        checked={paymentMethod === m.paymentMethod}
-                        onChange={() => setPaymentMethod(m.paymentMethod)}
-                        disabled={creating}
-                      />
-                      <div>
-                        <div className="text-sm font-semibold text-gray-900">{m.paymentName}</div>
-                        {m.totalFee && (
-                          <div className="text-xs text-gray-500">Biaya: Rp {Number(m.totalFee).toLocaleString('id-ID')}</div>
+              <div className="max-h-72 space-y-2 overflow-y-auto">
+                {methods.map((method) => {
+                  const fee = Number(method.totalFee || 0);
+                  const checked = paymentMethod === method.paymentMethod;
+
+                  return (
+                    <button
+                      key={method.paymentMethod}
+                      type="button"
+                      onClick={() => setPaymentMethod(method.paymentMethod)}
+                      className={`flex w-full items-center justify-between rounded-lg border px-3 py-3 text-left transition ${
+                        checked
+                          ? 'border-blue-600 bg-blue-50'
+                          : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        {method.paymentImage ? (
+                          <img src={method.paymentImage} alt={method.paymentName} className="h-8 w-8 object-contain" />
+                        ) : (
+                          <CreditCard className="h-5 w-5 text-gray-500" />
                         )}
+                        <div>
+                          <div className="font-medium text-gray-900">{method.paymentName}</div>
+                          {Number.isFinite(fee) && fee > 0 && (
+                            <div className="text-xs text-gray-500">
+                              {text.fee}: {formatCurrency(fee, false, locale)}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    {m.paymentImage ? (
-                      <img src={m.paymentImage} alt={m.paymentName} className="h-8 w-auto" />
-                    ) : null}
-                  </label>
-                ))}
+                      <div
+                        className={`h-4 w-4 rounded-full border ${
+                          checked ? 'border-blue-600 bg-blue-600' : 'border-gray-300'
+                        }`}
+                      />
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-3 border-t px-6 py-4">
+        <div className="flex justify-end gap-3 border-t px-6 py-4">
           <button
+            type="button"
             onClick={onClose}
-            className="rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100"
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
             disabled={creating}
           >
-            Batal
+            {text.close}
           </button>
           <button
+            type="button"
             onClick={startPayment}
-            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
             disabled={creating || loadingMethods || !paymentMethod}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
           >
-            {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            <span>{creating ? 'Mengalihkan...' : 'Lanjut Bayar'}</span>
+            {creating ? text.creating : text.startPayment}
           </button>
         </div>
       </div>
     </div>
   );
 }
-

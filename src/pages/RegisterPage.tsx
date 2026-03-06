@@ -1,30 +1,95 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { Link, useNavigate } from 'react-router-dom';
 import { UserPlus } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useI18n } from '@/contexts/I18nContext';
+import LegalLinks from '@/components/LegalLinks';
+
+const copy = {
+  en: {
+    title: 'Register',
+    subtitle: 'Create your new account',
+    email: 'Email',
+    password: 'Password',
+    confirmPassword: 'Confirm password',
+    emailPlaceholder: 'email@example.com',
+    passwordPlaceholder: 'Minimum 6 characters',
+    confirmPlaceholder: 'Repeat your password',
+    submit: 'Create account',
+    loading: 'Creating account...',
+    google: 'Continue with Google',
+    alreadyHaveAccount: 'Already have an account?',
+    signIn: 'Sign in',
+    success: 'Registration successful. Redirecting you to the sign-in page...',
+    passwordMismatch: 'Passwords do not match',
+    passwordLength: 'Password must be at least 6 characters',
+    registerFailed: 'Failed to register. Please try again.',
+    googleFailed: 'Failed to sign in with Google.',
+    consentPrefix: 'By registering, you agree to our',
+    consentAnd: 'and',
+    consentRequired: 'You must agree to the Terms of Service and Privacy Policy.',
+    terms: 'Terms of Service',
+    privacy: 'Privacy Policy',
+    or: 'or',
+  },
+  id: {
+    title: 'Daftar',
+    subtitle: 'Buat akun baru Anda',
+    email: 'Email',
+    password: 'Password',
+    confirmPassword: 'Konfirmasi password',
+    emailPlaceholder: 'email@contoh.com',
+    passwordPlaceholder: 'Minimal 6 karakter',
+    confirmPlaceholder: 'Ulangi password',
+    submit: 'Buat akun',
+    loading: 'Membuat akun...',
+    google: 'Lanjut dengan Google',
+    alreadyHaveAccount: 'Sudah punya akun?',
+    signIn: 'Masuk',
+    success: 'Pendaftaran berhasil. Mengalihkan ke halaman login...',
+    passwordMismatch: 'Password tidak cocok',
+    passwordLength: 'Password minimal 6 karakter',
+    registerFailed: 'Gagal mendaftar. Silakan coba lagi.',
+    googleFailed: 'Gagal masuk dengan Google.',
+    consentPrefix: 'Dengan mendaftar Anda menyetujui',
+    consentAnd: 'dan',
+    consentRequired: 'Anda harus menyetujui Syarat dan Ketentuan serta Kebijakan Privasi.',
+    terms: 'Syarat dan Ketentuan',
+    privacy: 'Kebijakan Privasi',
+    or: 'atau',
+  },
+} as const;
 
 export default function RegisterPage() {
+  const { locale } = useI18n();
+  const text = copy[locale];
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const { signUp, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setError('');
     setSuccess(false);
 
     if (password !== confirmPassword) {
-      setError('Password tidak cocok');
+      setError(text.passwordMismatch);
       return;
     }
 
     if (password.length < 6) {
-      setError('Password minimal 6 karakter');
+      setError(text.passwordLength);
+      return;
+    }
+
+    if (!agreed) {
+      setError(text.consentRequired);
       return;
     }
 
@@ -37,130 +102,154 @@ export default function RegisterPage() {
         navigate('/login');
       }, 2000);
     } catch (err: any) {
-      setError(err.message || 'Gagal mendaftar. Silakan coba lagi.');
+      setError(err.message || text.registerFailed);
     } finally {
       setLoading(false);
     }
   };
 
-const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = async () => {
     try {
       await signInWithGoogle();
     } catch (err: any) {
-      setError(err.message || 'Gagal masuk dengan Google.');
+      setError(err.message || text.googleFailed);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4">
-      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
+      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl">
+        <div className="mb-8 text-center">
+          <div className="mb-4 flex justify-center">
             <UserPlus className="h-12 w-12 text-blue-600" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">Daftar</h1>
-          <p className="text-gray-600 mt-2">Buat akun baru Anda</p>
+          <h1 className="text-3xl font-bold text-gray-900">{text.title}</h1>
+          <p className="mt-2 text-gray-600">{text.subtitle}</p>
         </div>
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
-            {error}
-          </div>
-        )}
-
+        {error && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700">{error}</div>}
         {success && (
-          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4">
-            Pendaftaran berhasil! Mengalihkan ke halaman login...
-          </div>
+          <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-700">{text.success}</div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-              Email
+            <label htmlFor="email" className="mb-2 block text-sm font-medium text-gray-700">
+              {text.email}
             </label>
             <input
               id="email"
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(event) => setEmail(event.target.value)}
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="email@contoh.com"
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+              placeholder={text.emailPlaceholder}
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-              Password
+            <label htmlFor="password" className="mb-2 block text-sm font-medium text-gray-700">
+              {text.password}
             </label>
             <input
               id="password"
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(event) => setPassword(event.target.value)}
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Minimal 6 karakter"
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+              placeholder={text.passwordPlaceholder}
             />
           </div>
 
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-              Konfirmasi Password
+            <label htmlFor="confirmPassword" className="mb-2 block text-sm font-medium text-gray-700">
+              {text.confirmPassword}
             </label>
             <input
               id="confirmPassword"
               type="password"
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              onChange={(event) => setConfirmPassword(event.target.value)}
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Ulangi password"
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+              placeholder={text.confirmPlaceholder}
             />
           </div>
 
+          <label className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={(event) => setAgreed(event.target.checked)}
+              className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span>
+              {text.consentPrefix}{' '}
+              <Link to="/terms" className="font-semibold text-blue-600 hover:text-blue-700">
+                {text.terms}
+              </Link>{' '}
+              {text.consentAnd}{' '}
+              <Link to="/privacy" className="font-semibold text-blue-600 hover:text-blue-700">
+                {text.privacy}
+              </Link>
+              .
+            </span>
+          </label>
+
           <button
             type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            disabled={loading || !agreed}
+            className="w-full rounded-lg bg-blue-600 px-4 py-3 text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
           >
-            {loading ? 'Memproses...' : 'Daftar'}
+            {loading ? text.loading : text.submit}
           </button>
         </form>
 
-        <div className="mt-6 text-center">
-          <div className="relative my-4">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">ATAU</span>
-            </div>
-          </div>
-
-          <button
-            onClick={handleGoogleSignIn}
-            className="w-full flex items-center justify-center py-3 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            <svg className="w-5 h-5 mr-2" viewBox="0 0 48 48">
-              <path fill="#4285F4" d="M24 9.5c3.9 0 6.9 1.6 9.1 3.7l6.9-6.9C35.9 2.5 30.5 0 24 0 14.5 0 6.5 5.5 2.8 13.4l8.4 6.5C13.2 13.2 18.2 9.5 24 9.5z"></path>
-              <path fill="#34A853" d="M46.2 25.6c0-1.7-.2-3.4-.5-5H24v9.5h12.5c-.5 3.1-2.9 6.2-5.7 8.1l7.3 5.7c4.2-3.9 6.6-9.6 6.6-16.3z"></path>
-              <path fill="#FBBC05" d="M11.2 28.4c-.4-.9-.6-1.9-.6-2.9s.2-2 .6-2.9l-8.4-6.5C1 19.6 0 22.7 0 25.5s1 5.9 2.8 8.4l8.4-5.5z"></path>
-              <path fill="#EA4335" d="M24 48c6.5 0 12-2.1 16-5.6l-7.3-5.7c-2.1 1.4-4.8 2.3-7.7 2.3-5.8 0-10.8-3.7-12.8-8.6l-8.4 6.5C6.5 42.5 14.5 48 24 48z"></path>
-              <path fill="none" d="M0 0h48v48H0z"></path>
-            </svg>
-            Masuk dengan Google
-          </button>
+        <div className="my-6 flex items-center">
+          <div className="h-px flex-1 bg-gray-200" />
+          <span className="px-4 text-sm text-gray-500">{text.or}</span>
+          <div className="h-px flex-1 bg-gray-200" />
         </div>
+
+        <button
+          type="button"
+          onClick={handleGoogleSignIn}
+          className="flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 px-4 py-3 transition-colors hover:bg-gray-50"
+        >
+          <svg className="h-5 w-5" viewBox="0 0 24 24">
+            <path
+              fill="#4285F4"
+              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.03 2.53-2.2 3.31v2.74h3.56c2.08-1.92 3.28-4.74 3.28-8.06z"
+            />
+            <path
+              fill="#34A853"
+              d="M12 23c2.97 0 5.46-.98 7.28-2.69l-3.56-2.74c-.98.66-2.24 1.06-3.72 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+            />
+            <path
+              fill="#FBBC05"
+              d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.86-2.84z"
+            />
+            <path
+              fill="#EA4335"
+              d="M12 5.38c1.62 0 3.06.56 4.2 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+            />
+          </svg>
+          <span>{text.google}</span>
+        </button>
 
         <div className="mt-6 text-center">
           <p className="text-gray-600">
-            Sudah punya akun?{' '}
-            <Link to="/login" className="text-blue-600 hover:text-blue-700 font-medium">
-              Masuk di sini
+            {text.alreadyHaveAccount}{' '}
+            <Link to="/login" className="font-medium text-blue-600 hover:text-blue-700">
+              {text.signIn}
             </Link>
           </p>
+        </div>
+
+        <div className="mt-6 border-t border-gray-100 pt-4 text-center text-sm text-gray-500">
+          <LegalLinks />
         </div>
       </div>
     </div>

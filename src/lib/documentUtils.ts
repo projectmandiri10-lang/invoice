@@ -3,6 +3,77 @@ import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import type { AppPlan } from '@/contexts/AuthContext';
 import type { InvoiceData } from '@/types/document';
+import {
+  formatCurrency as formatCurrencyLocalized,
+  formatDate as formatDateLocalized,
+  getMoneyWordsSuffix,
+  numberToWords as numberToWordsLocalized,
+  resolveInitialLocale,
+  type Locale,
+} from '@/lib/i18n';
+
+const pdfCopy = {
+  en: {
+    invoiceNumber: 'No',
+    date: 'Date',
+    dueDate: 'Due Date',
+    from: 'From:',
+    to: 'To:',
+    description: 'Description',
+    unitPrice: 'Unit Price',
+    subtotal: 'Subtotal:',
+    discount: 'Discount:',
+    tax: 'Tax',
+    total: 'Total:',
+    paymentInfo: 'Payment Information:',
+    notes: 'Notes:',
+    signature: 'Regards,',
+    watermark: 'Created with idCashier Invoice Generator',
+    deliveryNote: 'DELIVERY NOTE',
+    deliveryNumber: 'Delivery Note No.',
+    sender: 'Sender:',
+    recipient: 'Recipient:',
+    itemDescription: 'Item Description',
+    unit: 'Unit',
+    receipt: 'RECEIPT',
+    receivedFrom: 'Received from',
+    amount: 'Amount',
+    amountInWords: 'Amount in words',
+    forPayment: 'For payment',
+    paymentMethod: 'Payment method',
+    receiver: 'Receiver,',
+  },
+  id: {
+    invoiceNumber: 'No',
+    date: 'Tanggal',
+    dueDate: 'Jatuh Tempo',
+    from: 'Dari:',
+    to: 'Kepada:',
+    description: 'Deskripsi',
+    unitPrice: 'Harga Satuan',
+    subtotal: 'Subtotal:',
+    discount: 'Diskon:',
+    tax: 'Pajak',
+    total: 'Total:',
+    paymentInfo: 'Informasi Pembayaran:',
+    notes: 'Catatan:',
+    signature: 'Hormat kami,',
+    watermark: 'Dibuat dengan idCashier Invoice Generator',
+    deliveryNote: 'SURAT JALAN',
+    deliveryNumber: 'No. Surat Jalan',
+    sender: 'Pengirim:',
+    recipient: 'Penerima:',
+    itemDescription: 'Deskripsi Barang',
+    unit: 'Satuan',
+    receipt: 'KWITANSI',
+    receivedFrom: 'Sudah terima dari',
+    amount: 'Uang sejumlah',
+    amountInWords: 'Terbilang',
+    forPayment: 'Untuk pembayaran',
+    paymentMethod: 'Metode Pembayaran',
+    receiver: 'Penerima,',
+  },
+} as const;
 
 // Fungsi ini hanya digunakan untuk fallback jika diperlukan, bisa dihapus nanti.
 function cloneAndClean(element: HTMLElement): HTMLElement {
@@ -30,57 +101,16 @@ function cloneAndClean(element: HTMLElement): HTMLElement {
   return clone;
 }
 
-export function formatCurrency(amount: number, showDecimals = false): string {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: showDecimals ? 2 : 0,
-    maximumFractionDigits: showDecimals ? 2 : 0,
-  }).format(amount);
+export function formatCurrency(amount: number, showDecimals = false, locale: Locale = resolveInitialLocale()): string {
+  return formatCurrencyLocalized(amount, showDecimals, locale);
 }
 
-export function formatDate(date: string): string {
-  if (!date) return '';
-  const d = new Date(date);
-  return new Intl.DateTimeFormat('id-ID', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).format(d);
+export function formatDate(date: string, locale: Locale = resolveInitialLocale()): string {
+  return formatDateLocalized(date, locale);
 }
 
-export function numberToWords(num: number): string {
-  const units = ['', 'satu', 'dua', 'tiga', 'empat', 'lima', 'enam', 'tujuh', 'delapan', 'sembilan'];
-  const teens = ['sepuluh', 'sebelas', 'dua belas', 'tiga belas', 'empat belas', 'lima belas', 'enam belas', 'tujuh belas', 'delapan belas', 'sembilan belas'];
-  const tens = ['', '', 'dua puluh', 'tiga puluh', 'empat puluh', 'lima puluh', 'enam puluh', 'tujuh puluh', 'delapan puluh', 'sembilan puluh'];
-
-  if (num === 0) return 'nol';
-  if (num < 10) return units[num];
-  if (num >= 10 && num < 20) return teens[num - 10];
-  if (num >= 20 && num < 100) {
-    const ten = Math.floor(num / 10);
-    const unit = num % 10;
-    return tens[ten] + (unit > 0 ? ' ' + units[unit] : '');
-  }
-  if (num >= 100 && num < 1000) {
-    const hundred = Math.floor(num / 100);
-    const remainder = num % 100;
-    const hundredWord = hundred === 1 ? 'seratus' : units[hundred] + ' ratus';
-    return hundredWord + (remainder > 0 ? ' ' + numberToWords(remainder) : '');
-  }
-  if (num >= 1000 && num < 1000000) {
-    const thousand = Math.floor(num / 1000);
-    const remainder = num % 1000;
-    const thousandWord = thousand === 1 ? 'seribu' : numberToWords(thousand) + ' ribu';
-    return thousandWord + (remainder > 0 ? ' ' + numberToWords(remainder) : '');
-  }
-  if (num >= 1000000) {
-    const million = Math.floor(num / 1000000);
-    const remainder = num % 1000000;
-    return numberToWords(million) + ' juta' + (remainder > 0 ? ' ' + numberToWords(remainder) : '');
-  }
-
-  return num.toString();
+export function numberToWords(num: number, locale: Locale = resolveInitialLocale()): string {
+  return numberToWordsLocalized(num, locale);
 }
 
 export function getInvoiceLabel(invoiceData?: Pick<InvoiceData, 'invoiceLabel'> | null): string {
@@ -90,7 +120,13 @@ export function getInvoiceLabel(invoiceData?: Pick<InvoiceData, 'invoiceLabel'> 
 
 // --- PDF Generation Functions ---
 
-export async function exportInvoiceToPDF(invoiceData: any, settings: any, userTier: AppPlan) {
+export async function exportInvoiceToPDF(
+  invoiceData: any,
+  settings: any,
+  userTier: AppPlan,
+  locale: Locale = resolveInitialLocale()
+) {
+  const text = pdfCopy[locale];
   const doc = new jsPDF();
   let logoBottomY = 15;
 
@@ -128,16 +164,16 @@ export async function exportInvoiceToPDF(invoiceData: any, settings: any, userTi
   const startY = Math.max(logoBottomY + 10, 50);
   doc.setFontSize(10);
   doc.setTextColor(100);
-  doc.text(`No: ${invoiceData.invoiceNumber}`, 15, startY);
-  doc.text(`Tanggal: ${formatDate(invoiceData.invoiceDate)}`, 195, startY, { align: 'right' });
+  doc.text(`${text.invoiceNumber}: ${invoiceData.invoiceNumber}`, 15, startY);
+  doc.text(`${text.date}: ${formatDate(invoiceData.invoiceDate, locale)}`, 195, startY, { align: 'right' });
   if (settings.visibleFields.dueDate) {
-    doc.text(`Jatuh Tempo: ${formatDate(invoiceData.dueDate)}`, 195, startY + 5, { align: 'right' });
+    doc.text(`${text.dueDate}: ${formatDate(invoiceData.dueDate, locale)}`, 195, startY + 5, { align: 'right' });
   }
 
   doc.setFontSize(10);
   doc.setTextColor(50);
-  doc.text('Dari:', 15, startY + 15);
-  doc.text('Kepada:', 110, startY + 15);
+  doc.text(text.from, 15, startY + 15);
+  doc.text(text.to, 110, startY + 15);
   doc.setFontSize(12);
   doc.setTextColor(0);
   doc.text(invoiceData.companyName, 15, startY + 22);
@@ -147,15 +183,15 @@ export async function exportInvoiceToPDF(invoiceData: any, settings: any, userTi
   doc.text(invoiceData.companyAddress, 15, startY + 28, { maxWidth: 80 });
   doc.text(invoiceData.clientAddress, 110, startY + 28, { maxWidth: 80 });
 
-  const tableColumn = ["No", "Deskripsi", "Qty", "Harga Satuan", "Total"];
+  const tableColumn = [text.invoiceNumber, text.description, 'Qty', text.unitPrice, 'Total'];
   const tableRows: any[][] = [];
   invoiceData.items.forEach((item: any, index: number) => {
     tableRows.push([
       index + 1,
       item.description,
       item.quantity,
-      formatCurrency(item.unitPrice, settings.visibleFields.showDecimals),
-      formatCurrency(item.total, settings.visibleFields.showDecimals)
+      formatCurrency(item.unitPrice, settings.visibleFields.showDecimals, locale),
+      formatCurrency(item.total, settings.visibleFields.showDecimals, locale)
     ]);
   });
 
@@ -185,20 +221,20 @@ export async function exportInvoiceToPDF(invoiceData: any, settings: any, userTi
   doc.setFont('helvetica', 'normal');
 
   if (showSubtotal) {
-    doc.text('Subtotal:', totalsLabelX, totalsY);
-    doc.text(formatCurrency(invoiceData.subtotal, settings.visibleFields.showDecimals), totalsValueX, totalsY, { align: 'right' });
+    doc.text(text.subtotal, totalsLabelX, totalsY);
+    doc.text(formatCurrency(invoiceData.subtotal, settings.visibleFields.showDecimals, locale), totalsValueX, totalsY, { align: 'right' });
     totalsY += totalsLineHeight;
   }
 
   if (showDiscount) {
-    doc.text('Diskon:', totalsLabelX, totalsY);
-    doc.text(formatCurrency(-discountValue, settings.visibleFields.showDecimals), totalsValueX, totalsY, { align: 'right' });
+    doc.text(text.discount, totalsLabelX, totalsY);
+    doc.text(formatCurrency(-discountValue, settings.visibleFields.showDecimals, locale), totalsValueX, totalsY, { align: 'right' });
     totalsY += totalsLineHeight;
   }
 
   if (showTax) {
-    doc.text(`Pajak (${invoiceData.taxPercentage}%):`, totalsLabelX, totalsY);
-    doc.text(formatCurrency(invoiceData.tax, settings.visibleFields.showDecimals), totalsValueX, totalsY, { align: 'right' });
+    doc.text(`${text.tax} (${invoiceData.taxPercentage}%):`, totalsLabelX, totalsY);
+    doc.text(formatCurrency(invoiceData.tax, settings.visibleFields.showDecimals, locale), totalsValueX, totalsY, { align: 'right' });
     totalsY += totalsLineHeight;
   }
 
@@ -206,8 +242,8 @@ export async function exportInvoiceToPDF(invoiceData: any, settings: any, userTi
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(settings.colorScheme.primary);
-    doc.text('Total:', totalsLabelX, totalsY + 2);
-    doc.text(formatCurrency(invoiceData.total, settings.visibleFields.showDecimals), totalsValueX, totalsY + 2, { align: 'right' });
+    doc.text(text.total, totalsLabelX, totalsY + 2);
+    doc.text(formatCurrency(invoiceData.total, settings.visibleFields.showDecimals, locale), totalsValueX, totalsY + 2, { align: 'right' });
     totalsY += 12;
   }
 
@@ -217,17 +253,17 @@ export async function exportInvoiceToPDF(invoiceData: any, settings: any, userTi
   doc.setFont('helvetica', 'normal');
 
   if (settings.visibleFields.paymentInfo) {
-    doc.text('Informasi Pembayaran:', 15, notesY);
+    doc.text(text.paymentInfo, 15, notesY);
     doc.text(invoiceData.paymentInfo, 15, notesY + 5, { maxWidth: 90 });
   }
 
   if (settings.visibleFields.notes) {
     notesY += settings.visibleFields.paymentInfo ? 20 : 0;
-    doc.text('Catatan:', 15, notesY);
+    doc.text(text.notes, 15, notesY);
     doc.text(invoiceData.notes, 15, notesY + 5, { maxWidth: 90 });
   }
 
-  doc.text('Hormat kami,', 160, notesY + 30);
+  doc.text(text.signature, 160, notesY + 30);
   doc.text(invoiceData.signatureName || '', 160, notesY + 55);
   doc.line(160, notesY + 57, 195, notesY + 57);
   doc.text(invoiceData.signatureTitle || '', 160, notesY + 62);
@@ -238,7 +274,7 @@ export async function exportInvoiceToPDF(invoiceData: any, settings: any, userTi
       doc.setPage(i);
       doc.setFontSize(10);
       doc.setTextColor(150);
-      doc.text('Dibuat dengan idCashier Invoice Generator', doc.internal.pageSize.width / 2, doc.internal.pageSize.height - 10, { align: 'center' });
+      doc.text(text.watermark, doc.internal.pageSize.width / 2, doc.internal.pageSize.height - 10, { align: 'center' });
     }
   };
 
@@ -248,7 +284,13 @@ export async function exportInvoiceToPDF(invoiceData: any, settings: any, userTi
   doc.save(`Invoice-${invoiceData.invoiceNumber}.pdf`);
 }
 
-export async function exportSuratJalanToPDF(suratJalanData: any, settings: any, userTier: AppPlan) {
+export async function exportSuratJalanToPDF(
+  suratJalanData: any,
+  settings: any,
+  userTier: AppPlan,
+  locale: Locale = resolveInitialLocale()
+) {
+  const text = pdfCopy[locale];
   const doc = new jsPDF();
   let logoBottomY = 15;
 
@@ -281,20 +323,20 @@ export async function exportSuratJalanToPDF(suratJalanData: any, settings: any, 
 
   doc.setFontSize(22);
   doc.setTextColor(settings.colorScheme.secondary);
-  doc.text('SURAT JALAN', 105, 30, { align: 'center' });
+  doc.text(text.deliveryNote, 105, 30, { align: 'center' });
 
   const startY = Math.max(logoBottomY + 10, 50);
   doc.setFontSize(10);
   doc.setTextColor(100);
   doc.text(suratJalanData.companyName, 15, startY);
-  doc.text(`No. Surat Jalan: ${suratJalanData.suratJalanNumber}`, 195, startY, { align: 'right' });
+  doc.text(`${text.deliveryNumber}: ${suratJalanData.suratJalanNumber}`, 195, startY, { align: 'right' });
   doc.text(suratJalanData.companyAddress, 15, startY + 5, { maxWidth: 80 });
-  doc.text(`Tanggal: ${formatDate(suratJalanData.suratJalanDate)}`, 195, startY + 5, { align: 'right' });
+  doc.text(`${text.date}: ${formatDate(suratJalanData.suratJalanDate, locale)}`, 195, startY + 5, { align: 'right' });
 
   doc.setFontSize(10);
   doc.setTextColor(50);
-  doc.text('Pengirim:', 15, startY + 20);
-  doc.text('Penerima:', 110, startY + 20);
+  doc.text(text.sender, 15, startY + 20);
+  doc.text(text.recipient, 110, startY + 20);
   doc.setFontSize(12);
   doc.setTextColor(0);
   doc.text(suratJalanData.senderName, 15, startY + 27);
@@ -304,7 +346,7 @@ export async function exportSuratJalanToPDF(suratJalanData: any, settings: any, 
   doc.text(suratJalanData.senderAddress, 15, startY + 33, { maxWidth: 80 });
   doc.text(suratJalanData.recipientAddress, 110, startY + 33, { maxWidth: 80 });
 
-  const tableColumn = ["No", "Deskripsi Barang", "Qty", "Satuan"];
+  const tableColumn = [text.invoiceNumber, text.itemDescription, 'Qty', text.unit];
   const tableRows: any[][] = [];
   suratJalanData.items.forEach((item: any, index: number) => {
     tableRows.push([index + 1, item.description, item.quantity, item.unit]);
@@ -325,7 +367,7 @@ export async function exportSuratJalanToPDF(suratJalanData: any, settings: any, 
   doc.text('Pengirim,', 15, finalY + 20);
   doc.line(15, finalY + 42, 60, finalY + 42);
   doc.text(suratJalanData.senderSignatureName || '', 15, finalY + 47);
-  doc.text('Penerima,', 150, finalY + 20);
+  doc.text(text.receiver, 150, finalY + 20);
   doc.line(150, finalY + 42, 195, finalY + 42);
   doc.text(suratJalanData.recipientSignatureName || '', 150, finalY + 47);
 
@@ -335,7 +377,7 @@ export async function exportSuratJalanToPDF(suratJalanData: any, settings: any, 
       doc.setPage(i);
       doc.setFontSize(10);
       doc.setTextColor(150);
-      doc.text('Dibuat dengan idCashier Invoice Generator', doc.internal.pageSize.width / 2, doc.internal.pageSize.height - 10, { align: 'center' });
+      doc.text(text.watermark, doc.internal.pageSize.width / 2, doc.internal.pageSize.height - 10, { align: 'center' });
     }
   };
 
@@ -345,7 +387,13 @@ export async function exportSuratJalanToPDF(suratJalanData: any, settings: any, 
   doc.save(`SuratJalan-${suratJalanData.suratJalanNumber}.pdf`);
 }
 
-export async function exportKwitansiToPDF(kwitansiData: any, settings: any, userTier: AppPlan) {
+export async function exportKwitansiToPDF(
+  kwitansiData: any,
+  settings: any,
+  userTier: AppPlan,
+  locale: Locale = resolveInitialLocale()
+) {
+  const text = pdfCopy[locale];
   const doc = new jsPDF();
   let logoBottomY = 15;
 
@@ -378,23 +426,23 @@ export async function exportKwitansiToPDF(kwitansiData: any, settings: any, user
 
   doc.setFontSize(22);
   doc.setTextColor(settings.colorScheme.accent);
-  doc.text('KWITANSI', 105, 30, { align: 'center' });
+  doc.text(text.receipt, 105, 30, { align: 'center' });
 
   const startY = Math.max(logoBottomY + 10, 40);
   doc.setFontSize(10);
   doc.setTextColor(100);
   doc.text(`No: ${kwitansiData.kwitansiNumber}`, 195, startY, { align: 'right' });
-  doc.text(`Tanggal: ${formatDate(kwitansiData.kwitansiDate)}`, 195, startY + 5, { align: 'right' });
+  doc.text(`${text.date}: ${formatDate(kwitansiData.kwitansiDate, locale)}`, 195, startY + 5, { align: 'right' });
 
   doc.setFontSize(12);
   doc.setTextColor(0);
   
   const details = [
-    { label: 'Sudah terima dari', value: kwitansiData.receivedFrom },
-    { label: 'Uang sejumlah', value: formatCurrency(kwitansiData.amount, settings.visibleFields.showDecimals) },
-    { label: 'Terbilang', value: `${numberToWords(kwitansiData.amount)} rupiah` },
-    { label: 'Untuk pembayaran', value: kwitansiData.description },
-    { label: 'Metode Pembayaran', value: kwitansiData.paymentMethod },
+    { label: text.receivedFrom, value: kwitansiData.receivedFrom },
+    { label: text.amount, value: formatCurrency(kwitansiData.amount, settings.visibleFields.showDecimals, locale) },
+    { label: text.amountInWords, value: `${numberToWords(kwitansiData.amount, locale)} ${getMoneyWordsSuffix(locale)}` },
+    { label: text.forPayment, value: kwitansiData.description },
+    { label: text.paymentMethod, value: kwitansiData.paymentMethod },
   ];
   
   let yPosition = startY + 30;
@@ -413,7 +461,7 @@ export async function exportKwitansiToPDF(kwitansiData: any, settings: any, user
 
   doc.setFontSize(10);
   doc.setTextColor(100);
-  doc.text('Penerima,', 160, yPosition + 30);
+  doc.text(text.receiver, 160, yPosition + 30);
   doc.text(kwitansiData.receiverName || '', 160, yPosition + 55);
   doc.line(160, yPosition + 57, 195, yPosition + 57);
   doc.text(kwitansiData.receiverPosition || '', 160, yPosition + 62);
@@ -424,7 +472,7 @@ export async function exportKwitansiToPDF(kwitansiData: any, settings: any, user
       doc.setPage(i);
       doc.setFontSize(10);
       doc.setTextColor(150);
-      doc.text('Dibuat dengan idCashier Invoice Generator', doc.internal.pageSize.width / 2, doc.internal.pageSize.height - 10, { align: 'center' });
+      doc.text(text.watermark, doc.internal.pageSize.width / 2, doc.internal.pageSize.height - 10, { align: 'center' });
     }
   };
 

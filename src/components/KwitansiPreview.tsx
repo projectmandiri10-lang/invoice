@@ -1,15 +1,53 @@
 import React from 'react';
-import { KwitansiData } from '@/types/document';
 import { DocumentSettings } from '@/components/SettingsPanel';
+import { useI18n } from '@/contexts/I18nContext';
 import { formatCurrency, formatDate, numberToWords } from '@/lib/documentUtils';
+import { KwitansiData } from '@/types/document';
 
 interface KwitansiPreviewProps {
   data: KwitansiData;
   settings?: DocumentSettings;
 }
 
+const copy = {
+  en: {
+    title: 'RECEIPT',
+    companyLogo: 'Company logo',
+    companyName: 'Company Name',
+    companyAddress: 'Company Address',
+    date: 'Date',
+    receivedFrom: 'Received from',
+    payerName: 'Payer Name',
+    amount: 'Amount',
+    amountInWords: 'Amount in words',
+    forPayment: 'For payment',
+    paymentMethod: 'Payment method',
+    receiver: 'Receiver,',
+    zeroAmount: 'Rp 0',
+    moneySuffix: 'rupiah',
+  },
+  id: {
+    title: 'KWITANSI',
+    companyLogo: 'Logo perusahaan',
+    companyName: 'Nama Perusahaan',
+    companyAddress: 'Alamat Perusahaan',
+    date: 'Tanggal',
+    receivedFrom: 'Sudah terima dari',
+    payerName: 'Nama Pembayar',
+    amount: 'Uang sejumlah',
+    amountInWords: 'Terbilang',
+    forPayment: 'Untuk pembayaran',
+    paymentMethod: 'Metode Pembayaran',
+    receiver: 'Penerima,',
+    zeroAmount: 'Rp 0',
+    moneySuffix: 'rupiah',
+  },
+} as const;
+
 export default function KwitansiPreview({ data, settings }: KwitansiPreviewProps) {
-  const amountWords = data.amount > 0 ? numberToWords(data.amount) + ' rupiah' : '';
+  const { locale } = useI18n();
+  const text = copy[locale];
+  const amountWords = data.amount > 0 ? `${numberToWords(data.amount, locale)} ${text.moneySuffix}` : '';
   const primaryColor = settings?.colorScheme.accent || '#9333ea';
   const fontFamily = settings?.font.family || 'Arial';
   const fontSize = settings?.font.size || 14;
@@ -17,162 +55,84 @@ export default function KwitansiPreview({ data, settings }: KwitansiPreviewProps
   const spacing = settings?.layout.spacing || 16;
 
   return (
-    <div 
-      id="kwitansi-preview" 
-      className="bg-white shadow-lg" 
-      style={{ 
+    <div
+      id="kwitansi-preview"
+      className="bg-white shadow-lg"
+      style={{
         minHeight: '297mm',
         fontFamily,
         fontSize: `${fontSize}px`,
-        padding: `${padding}px`
+        padding: `${padding}px`,
       }}
     >
       <div className="p-8">
         {settings?.logoUrl && settings.visibleFields.logo && (
-          <div className="text-center mb-4">
-            <img 
-              src={settings.logoUrl} 
-              alt="Company Logo" 
+          <div className="mb-4 text-center">
+            <img
+              src={settings.logoUrl}
+              alt={text.companyLogo}
               className="mx-auto"
               style={{ maxHeight: '60px', maxWidth: '200px' }}
             />
           </div>
         )}
-        <div className="text-center pb-6 mb-6">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2" style={{ color: primaryColor }}>
-            KWITANSI
+
+        <div className="mb-6 pb-6 text-center">
+          <h1 className="mb-2 text-4xl font-bold text-gray-900" style={{ color: primaryColor }}>
+            {text.title}
           </h1>
           <p className="text-lg text-gray-600">No. {data.kwitansiNumber}</p>
         </div>
 
         <div style={{ marginBottom: `${spacing * 2}px` }}>
-          <h2 
-            className="text-xl font-bold text-gray-900 mb-2" 
-            style={{ 
-              color: data.companyName ? 'inherit' : '#9ca3af',
-              fontStyle: data.companyName ? 'normal' : 'italic',
-              opacity: data.companyName ? 1 : 0.7
-            }}
-          >
-            {data.companyName || 'Nama Perusahaan'}
-          </h2>
-          <p 
-            className="text-gray-600" 
-            style={{ 
-              color: data.companyAddress ? 'inherit' : '#9ca3af',
-              fontStyle: data.companyAddress ? 'normal' : 'italic',
-              opacity: data.companyAddress ? 1 : 0.7
-            }}
-          >
-            {data.companyAddress || 'Alamat Perusahaan'}
-          </p>
+          <h2 className="mb-2 text-xl font-bold text-gray-900">{data.companyName || text.companyName}</h2>
+          <p className="text-gray-600">{data.companyAddress || text.companyAddress}</p>
         </div>
 
         <div style={{ marginBottom: `${spacing}px` }}>
-          <p className="text-gray-600 mb-1">
-            <span className="font-semibold">Tanggal:</span> {formatDate(data.kwitansiDate)}
+          <p className="mb-1 text-gray-600">
+            <span className="font-semibold">{text.date}:</span> {formatDate(data.kwitansiDate, locale)}
           </p>
         </div>
 
         <div className="space-y-4" style={{ marginBottom: `${spacing * 2}px` }}>
           <div className="grid grid-cols-[12rem_0.75rem_1fr] items-baseline gap-x-2">
-            <span className="font-semibold text-gray-900">Sudah terima dari</span>
+            <span className="font-semibold text-gray-900">{text.receivedFrom}</span>
             <span className="font-semibold text-gray-900">:</span>
-            <span
-              className="border-b border-gray-400"
-              style={{
-                color: data.receivedFrom ? 'inherit' : '#9ca3af',
-                fontStyle: data.receivedFrom ? 'normal' : 'italic',
-                opacity: data.receivedFrom ? 1 : 0.7,
-              }}
-            >
-              {data.receivedFrom || 'Nama Pembayar'}
+            <span className="border-b border-gray-400">{data.receivedFrom || text.payerName}</span>
+          </div>
+
+          <div className="grid grid-cols-[12rem_0.75rem_1fr] items-baseline gap-x-2">
+            <span className="font-semibold text-gray-900">{text.amount}</span>
+            <span className="font-semibold text-gray-900">:</span>
+            <span className="border-b border-gray-400">
+              {data.amount && data.amount !== 0 ? formatCurrency(data.amount, false, locale) : text.zeroAmount}
             </span>
           </div>
 
           <div className="grid grid-cols-[12rem_0.75rem_1fr] items-baseline gap-x-2">
-            <span className="font-semibold text-gray-900">Uang sejumlah</span>
+            <span className="font-semibold text-gray-900">{text.amountInWords}</span>
             <span className="font-semibold text-gray-900">:</span>
-            <span
-              className="border-b border-gray-400"
-              style={{
-                color: data.amount && data.amount !== 0 ? 'inherit' : '#9ca3af',
-                fontStyle: data.amount && data.amount !== 0 ? 'normal' : 'italic',
-                opacity: data.amount && data.amount !== 0 ? 1 : 0.7,
-              }}
-            >
-              {data.amount && data.amount !== 0 ? formatCurrency(data.amount) : 'Rp 0'}
-            </span>
+            <span className="border-b border-gray-400">{amountWords}</span>
           </div>
 
           <div className="grid grid-cols-[12rem_0.75rem_1fr] items-baseline gap-x-2">
-            <span className="font-semibold text-gray-900">Terbilang</span>
+            <span className="font-semibold text-gray-900">{text.forPayment}</span>
             <span className="font-semibold text-gray-900">:</span>
-            <span
-              className="border-b border-gray-400 italic capitalize"
-              style={{
-                color: data.amountInWords || amountWords ? 'inherit' : '#9ca3af',
-                fontStyle: data.amountInWords || amountWords ? 'normal' : 'italic',
-                opacity: data.amountInWords || amountWords ? 1 : 0.7,
-              }}
-            >
-              {data.amountInWords || amountWords || 'terbilang (auto-generate dari jumlah)'}
-            </span>
+            <span className="border-b border-gray-400">{data.description}</span>
           </div>
 
           <div className="grid grid-cols-[12rem_0.75rem_1fr] items-baseline gap-x-2">
-            <span className="font-semibold text-gray-900">Untuk pembayaran</span>
+            <span className="font-semibold text-gray-900">{text.paymentMethod}</span>
             <span className="font-semibold text-gray-900">:</span>
-            <span
-              className="border-b border-gray-400"
-              style={{
-                color: data.description ? 'inherit' : '#9ca3af',
-                fontStyle: data.description ? 'normal' : 'italic',
-                opacity: data.description ? 1 : 0.7,
-              }}
-            >
-              {data.description || 'Deskripsi pembayaran'}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-[12rem_0.75rem_1fr] items-baseline gap-x-2">
-            <span className="font-semibold text-gray-900">Metode Pembayaran</span>
-            <span className="font-semibold text-gray-900">:</span>
-            <span
-              className="border-b border-gray-400"
-              style={{
-                color: data.paymentMethod ? 'inherit' : '#9ca3af',
-                fontStyle: data.paymentMethod ? 'normal' : 'italic',
-                opacity: data.paymentMethod ? 1 : 0.7,
-              }}
-            >
-              {data.paymentMethod || 'Tunai/Transfer'}
-            </span>
+            <span className="border-b border-gray-400">{data.paymentMethod}</span>
           </div>
         </div>
 
-        {settings?.visibleFields.notes && data.notes && (
-          <div className="mb-8 p-4 bg-gray-50 rounded">
-            <h4 className="font-semibold text-gray-900 mb-2">Catatan:</h4>
-            <p className="text-gray-700">{data.notes}</p>
-          </div>
-        )}
-
-        <div className="flex justify-end mt-12">
-          <div className="text-center w-64">
-            <p className="mb-16">Penerima,</p>
-            <div>
-              <p 
-                className="font-semibold text-gray-900 inline-block px-8 pt-2"
-                style={{ borderTop: `2px solid ${primaryColor}` }}
-              >
-                {data.receiverName}
-              </p>
-              {data.receiverPosition && (
-                <p className="text-gray-600 text-sm mt-1">{data.receiverPosition}</p>
-              )}
-            </div>
-          </div>
+        <div className="mt-20 text-right">
+          <p className="mb-16">{text.receiver}</p>
+          <div className="ml-auto w-56 border-b border-gray-400 pb-1">{data.receiverName}</div>
+          <p className="mt-2 text-gray-600">{data.receiverPosition}</p>
         </div>
       </div>
     </div>

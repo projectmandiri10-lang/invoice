@@ -6,6 +6,7 @@ import { formatCurrency, formatDate, getInvoiceLabel } from '@/lib/documentUtils
 import { Plus, Trash2 } from 'lucide-react';
 import LogoUpload from '@/components/LogoUpload';
 import type { AppPlan } from '@/contexts/AuthContext';
+import { useI18n } from '@/contexts/I18nContext';
 import { supabase } from '@/lib/supabase';
 
 interface EditableInvoicePreviewProps {
@@ -17,7 +18,88 @@ interface EditableInvoicePreviewProps {
   userId?: string;
 }
 
+const copy = {
+  en: {
+    date: 'Date:',
+    dueDate: 'Due Date:',
+    companyName: 'Company Name',
+    companyAddress: 'Company Address',
+    companyEmail: 'company@example.com',
+    phone: 'Phone',
+    email: 'Email',
+    clientName: 'Client Name',
+    clientAddress: 'Client Address',
+    itemDescription: 'Item Description',
+    paymentInfo: 'Payment Information:',
+    notes: 'Notes:',
+    defaultNote: 'Thank you for your trust.',
+    subtotal: 'Subtotal:',
+    discount: 'Discount:',
+    tax: 'Tax',
+    total: 'Total:',
+    discountTitle: 'Discount (Rp)',
+    portalTitle: 'Payment portal link',
+    portalDescription: 'Share this link with your client so they can view the invoice and pay online when the Pro plan is active.',
+    proOnly: 'Invoice payments are available on the Pro plan.',
+    preparingPortal: 'Preparing portal link...',
+    copyLink: 'Copy Link',
+    portalCopied: 'Portal link copied',
+    portalCopyFailed: 'Failed to copy portal link',
+    portalHintStart: 'Fill in',
+    portalHintMiddle: 'Client Name',
+    portalHintEnd: 'then click',
+    portalHintSave: 'Save Document',
+    portalHintLast: 'to generate the portal link.',
+    regards: 'Regards,',
+    signatureName: 'Name',
+    signatureTitle: 'Title',
+    addItem: 'Add Item',
+    upgradeProTitle: 'Upgrade to Pro',
+    upgradeProDescription: 'Large invoice? Enable the client portal and online payments with the Pro plan (Rp 150,000/month).',
+  },
+  id: {
+    date: 'Tanggal:',
+    dueDate: 'Jatuh Tempo:',
+    companyName: 'Nama Perusahaan',
+    companyAddress: 'Alamat Perusahaan',
+    companyEmail: 'email@perusahaan.com',
+    phone: 'Telepon',
+    email: 'Email',
+    clientName: 'Nama Klien',
+    clientAddress: 'Alamat Klien',
+    itemDescription: 'Deskripsi Item',
+    paymentInfo: 'Informasi Pembayaran:',
+    notes: 'Catatan:',
+    defaultNote: 'Terima kasih atas kepercayaan Anda.',
+    subtotal: 'Subtotal:',
+    discount: 'Diskon:',
+    tax: 'Pajak',
+    total: 'Total:',
+    discountTitle: 'Diskon (Rp)',
+    portalTitle: 'Link Portal Pembayaran',
+    portalDescription: 'Bagikan link ini ke klien agar bisa melihat invoice dan membayar online saat paket Pro aktif.',
+    proOnly: 'Fitur pembayaran invoice tersedia di paket Pro.',
+    preparingPortal: 'Menyiapkan link portal...',
+    copyLink: 'Salin Link',
+    portalCopied: 'Link portal disalin',
+    portalCopyFailed: 'Gagal menyalin link portal',
+    portalHintStart: 'Isi',
+    portalHintMiddle: 'Nama Klien',
+    portalHintEnd: 'lalu klik',
+    portalHintSave: 'Simpan Dokumen',
+    portalHintLast: 'agar link portal terbentuk.',
+    regards: 'Hormat kami,',
+    signatureName: 'Nama',
+    signatureTitle: 'Jabatan',
+    addItem: 'Tambah Item',
+    upgradeProTitle: 'Upgrade ke Pro',
+    upgradeProDescription: 'Invoice besar? Aktifkan client portal dan pembayaran online dengan paket Pro (Rp 150.000/bulan).',
+  },
+} as const;
+
 export default function EditableInvoicePreview({ data, settings, onChange, onSettingsChange, userTier, userId }: EditableInvoicePreviewProps) {
+  const { locale } = useI18n();
+  const text = copy[locale];
   const primaryColor = settings?.colorScheme.primary || '#2563eb';
   const fontFamily = settings?.font.family || 'Arial';
   const fontSize = settings?.font.size || 14;
@@ -134,16 +216,12 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
 
   React.useEffect(() => {
     if (data.total > 50000000) {
-      const isIndonesia = navigator.language.startsWith('id');
-      const proPrice = isIndonesia ? 'Rp 150.000/bulan' : '$15/month';
-      const proCurrencyLimit = isIndonesia ? 'Rp 50jt' : '$3,000';
-
-      toast.info(`Upgrade to Pro (${proPrice})?`, {
-        description: `Invoice over ${proCurrencyLimit}? Get a client portal & accept online payments by upgrading.`,
+      toast.info(text.upgradeProTitle, {
+        description: text.upgradeProDescription,
         duration: 8000,
       });
     }
-  }, [data.total]);
+  }, [data.total, text.upgradeProTitle, text.upgradeProDescription]);
 
   React.useEffect(() => {
     const { subtotal, discount, tax, total } = calculateInvoiceTotals(
@@ -206,7 +284,7 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
           onBlur={(e) => updateField('invoiceLabel', e.target.value.trim() || 'INVOICE')}
           className="w-full bg-transparent text-center text-5xl font-bold mb-4 border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none"
           style={{ color: primaryColor }}
-          aria-label="Invoice title"
+          aria-label={locale === 'id' ? 'Judul invoice' : 'Invoice title'}
           placeholder={invoiceLabel}
         />
       </div>
@@ -229,7 +307,7 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
           </div>
           <div className="text-right">
             <div className="flex items-center justify-end mb-1">
-              <span className="font-semibold mr-2">Tanggal:</span>
+              <span className="font-semibold mr-2">{text.date}</span>
               <input
                 type="date"
                 value={data.invoiceDate}
@@ -239,7 +317,7 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
             </div>
             {settings?.visibleFields.dueDate && (
               <div className="flex items-center justify-end">
-                <span className="font-semibold mr-2">Jatuh Tempo:</span>
+                <span className="font-semibold mr-2">{text.dueDate}</span>
                 <input
                   type="date"
                   value={data.dueDate}
@@ -262,21 +340,21 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
               type="text"
               value={data.companyName}
               onChange={(e) => updateField('companyName', e.target.value)}
-              onFocus={(e) => e.target.value === 'Nama Perusahaan' && updateField('companyName', '')}
-              onBlur={(e) => e.target.value === '' && updateField('companyName', 'Nama Perusahaan')}
+              onFocus={(e) => e.target.value === text.companyName && updateField('companyName', '')}
+              onBlur={(e) => e.target.value === '' && updateField('companyName', text.companyName)}
               className="text-base font-bold text-gray-900 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none w-full mb-2"
-              placeholder="Nama Perusahaan"
-              style={{ color: data.companyName === 'Nama Perusahaan' ? '#9ca3af' : 'inherit' }}
+              placeholder={text.companyName}
+              style={{ color: data.companyName === text.companyName ? '#9ca3af' : 'inherit' }}
             />
             <textarea
               value={data.companyAddress}
               onChange={(e) => updateField('companyAddress', e.target.value)}
-              onFocus={(e) => e.target.value === 'Alamat Perusahaan' && updateField('companyAddress', '')}
-              onBlur={(e) => e.target.value === '' && updateField('companyAddress', 'Alamat Perusahaan')}
+              onFocus={(e) => e.target.value === text.companyAddress && updateField('companyAddress', '')}
+              onBlur={(e) => e.target.value === '' && updateField('companyAddress', text.companyAddress)}
               className="text-sm text-gray-600 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none w-full resize-none mb-1"
-              placeholder="Alamat Perusahaan"
+              placeholder={text.companyAddress}
               rows={2}
-              style={{ color: data.companyAddress === 'Alamat Perusahaan' ? '#9ca3af' : 'inherit' }}
+              style={{ color: data.companyAddress === text.companyAddress ? '#9ca3af' : 'inherit' }}
             />
             <input
               type="text"
@@ -292,11 +370,11 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
               type="email"
               value={data.companyEmail}
               onChange={(e) => updateField('companyEmail', e.target.value)}
-              onFocus={(e) => e.target.value === 'email@perusahaan.com' && updateField('companyEmail', '')}
-              onBlur={(e) => e.target.value === '' && updateField('companyEmail', 'email@perusahaan.com')}
+              onFocus={(e) => e.target.value === text.companyEmail && updateField('companyEmail', '')}
+              onBlur={(e) => e.target.value === '' && updateField('companyEmail', text.companyEmail)}
               className="text-sm text-gray-600 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none w-full mb-1"
-              placeholder="email@perusahaan.com"
-              style={{ color: data.companyEmail === 'email@perusahaan.com' ? '#9ca3af' : 'inherit' }}
+              placeholder={text.companyEmail}
+              style={{ color: data.companyEmail === text.companyEmail ? '#9ca3af' : 'inherit' }}
             />
             {settings?.visibleFields.companyNPWP && (
               <input
@@ -319,28 +397,28 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
               type="text"
               value={data.clientName}
               onChange={(e) => updateField('clientName', e.target.value)}
-              onFocus={(e) => e.target.value === 'Nama Klien' && updateField('clientName', '')}
-              onBlur={(e) => e.target.value === '' && updateField('clientName', 'Nama Klien')}
+              onFocus={(e) => e.target.value === text.clientName && updateField('clientName', '')}
+              onBlur={(e) => e.target.value === '' && updateField('clientName', text.clientName)}
               className="text-base font-bold text-gray-900 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none w-full mb-2"
-              placeholder="Nama Klien"
-              style={{ color: data.clientName === 'Nama Klien' ? '#9ca3af' : 'inherit' }}
+              placeholder={text.clientName}
+              style={{ color: data.clientName === text.clientName ? '#9ca3af' : 'inherit' }}
             />
             <textarea
               value={data.clientAddress}
               onChange={(e) => updateField('clientAddress', e.target.value)}
-              onFocus={(e) => e.target.value === 'Alamat Klien' && updateField('clientAddress', '')}
-              onBlur={(e) => e.target.value === '' && updateField('clientAddress', 'Alamat Klien')}
+              onFocus={(e) => e.target.value === text.clientAddress && updateField('clientAddress', '')}
+              onBlur={(e) => e.target.value === '' && updateField('clientAddress', text.clientAddress)}
               className="text-sm text-gray-600 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none w-full resize-none mb-1"
-              placeholder="Alamat Klien"
+              placeholder={text.clientAddress}
               rows={2}
-              style={{ color: data.clientAddress === 'Alamat Klien' ? '#9ca3af' : 'inherit' }}
+              style={{ color: data.clientAddress === text.clientAddress ? '#9ca3af' : 'inherit' }}
             />
             <input
               type="text"
               value={data.clientPhone || ''}
               onChange={(e) => updateField('clientPhone', e.target.value)}
               className="text-sm text-gray-600 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none w-full mb-1"
-              placeholder="Telepon"
+              placeholder={text.phone}
               style={{ 
                 color: data.clientPhone ? 'inherit' : '#9ca3af',
                 fontStyle: data.clientPhone ? 'normal' : 'italic',
@@ -352,7 +430,7 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
               value={data.clientEmail || ''}
               onChange={(e) => updateField('clientEmail', e.target.value)}
               className="text-sm text-gray-600 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none w-full mb-1"
-              placeholder="Email"
+              placeholder={text.email}
               style={{ 
                 color: data.clientEmail ? 'inherit' : '#9ca3af',
                 fontStyle: data.clientEmail ? 'normal' : 'italic',
@@ -381,9 +459,9 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
         <thead>
           <tr style={{ backgroundColor: `${primaryColor}15` }}>
             <th className="text-center p-3 border border-gray-300 w-16">No</th>
-            <th className="text-left p-3 border border-gray-300">Deskripsi</th>
+            <th className="text-left p-3 border border-gray-300">{locale === 'id' ? 'Deskripsi' : 'Description'}</th>
             <th className="text-center p-3 border border-gray-300 w-24">Qty</th>
-            <th className="text-right p-3 border border-gray-300 w-32">Harga Satuan</th>
+            <th className="text-right p-3 border border-gray-300 w-32">{locale === 'id' ? 'Harga Satuan' : 'Unit Price'}</th>
             <th className="text-right p-3 border border-gray-300 w-32">Total</th>
             <th className="text-center p-3 border border-gray-300 w-16">Aksi</th>
           </tr>
@@ -399,11 +477,11 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
                   type="text"
                   value={item.description}
                   onChange={(e) => updateItem(index, 'description', e.target.value)}
-                  onFocus={(e) => (e.target.value === 'Deskripsi Item' || e.target.value === 'Item Baru') && updateItem(index, 'description', '')}
-                  onBlur={(e) => e.target.value === '' && updateItem(index, 'description', 'Deskripsi Item')}
+                  onFocus={(e) => (e.target.value === text.itemDescription || e.target.value === 'Item Baru') && updateItem(index, 'description', '')}
+                  onBlur={(e) => e.target.value === '' && updateItem(index, 'description', text.itemDescription)}
                   className="w-full bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500 px-2 py-1 rounded"
-                  placeholder="Deskripsi Item"
-                  style={{ color: (item.description === 'Deskripsi Item' || item.description === 'Item Baru') ? '#9ca3af' : 'inherit' }}
+                  placeholder={text.itemDescription}
+                  style={{ color: (item.description === text.itemDescription || item.description === 'Item Baru') ? '#9ca3af' : 'inherit' }}
                 />
               </td>
               <td className="p-2 border border-gray-300">
@@ -433,13 +511,13 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
                 />
               </td>
               <td className="p-3 border border-gray-300 text-right text-gray-600">
-                {formatCurrency(item.total, settings?.visibleFields.showDecimals)}
+                {formatCurrency(item.total, settings?.visibleFields.showDecimals, locale)}
               </td>
               <td className="p-2 border border-gray-300 text-center">
                 <button
                   onClick={() => removeItem(index)}
                   className="text-red-600 hover:text-red-700 p-1"
-                  title="Hapus item"
+                    title={locale === 'id' ? 'Hapus item' : 'Remove item'}
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -454,7 +532,7 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
         className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors mb-4"
       >
         <Plus className="h-4 w-4" />
-                <span>Tambah Item</span>
+                <span>{text.addItem}</span>
       </button>
 
             <div className="flex justify-between items-start" style={{ marginBottom: `${spacing * 2}px` }}>
@@ -462,7 +540,7 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
           <div className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-4">
             {settings?.visibleFields.paymentInfo && (
               <>
-                <h4 className="font-semibold text-gray-900 self-start pt-2">Informasi Pembayaran:</h4>
+                <h4 className="font-semibold text-gray-900 self-start pt-2">{text.paymentInfo}</h4>
                 <textarea
                   value={data.paymentInfo}
                   onChange={(e) => updateField('paymentInfo', e.target.value)}
@@ -478,16 +556,16 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
 
             {settings?.visibleFields.notes && (
               <>
-                <h4 className="font-semibold text-gray-900 self-start pt-2">Catatan:</h4>
+                <h4 className="font-semibold text-gray-900 self-start pt-2">{text.notes}</h4>
                 <textarea
                   value={data.notes}
                   onChange={(e) => updateField('notes', e.target.value)}
-                  onFocus={(e) => e.target.value === 'Terima kasih atas kepercayaan Anda.' && updateField('notes', '')}
-                  onBlur={(e) => e.target.value === '' && updateField('notes', 'Terima kasih atas kepercayaan Anda.')}
+                  onFocus={(e) => e.target.value === text.defaultNote && updateField('notes', '')}
+                  onBlur={(e) => e.target.value === '' && updateField('notes', text.defaultNote)}
                   className="w-full text-gray-700 bg-gray-50 border border-gray-200 focus:border-blue-500 focus:outline-none resize-none p-2 rounded"
-                  placeholder="Terima kasih atas kepercayaan Anda."
+                  placeholder={text.defaultNote}
                   rows={3}
-                  style={{ color: data.notes === 'Terima kasih atas kepercayaan Anda.' ? '#9ca3af' : 'inherit' }}
+                  style={{ color: data.notes === text.defaultNote ? '#9ca3af' : 'inherit' }}
                 />
               </>
             )}
@@ -497,14 +575,14 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
         <div className="w-64">
           {settings?.visibleFields.subtotal && (
             <div className="flex justify-between py-2 border-b border-gray-300">
-              <span className="font-medium">Subtotal:</span>
-              <span>{formatCurrency(data.subtotal, settings?.visibleFields.showDecimals)}</span>
+              <span className="font-medium">{text.subtotal}</span>
+              <span>{formatCurrency(data.subtotal, settings?.visibleFields.showDecimals, locale)}</span>
             </div>
           )}
 
           {settings?.visibleFields.discount && (
             <div className="flex items-center justify-between py-2 border-b border-gray-300">
-              <span className="font-medium">Diskon:</span>
+              <span className="font-medium">{text.discount}</span>
               <input
                 type="number"
                 inputMode="decimal"
@@ -523,22 +601,22 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
                   onChange({ ...data, subtotal, discount, tax, total });
                 }}
                 className="w-32 text-right bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none"
-                title="Diskon (Rp)"
+                title={text.discountTitle}
               />
             </div>
           )}
 
           {settings?.visibleFields.tax && (
             <div className="flex justify-between py-2 border-b border-gray-300">
-              <span className="font-medium">Pajak ({data.taxPercentage}%):</span>
-              <span>{formatCurrency(data.tax, settings?.visibleFields.showDecimals)}</span>
+              <span className="font-medium">{text.tax} ({data.taxPercentage}%):</span>
+              <span>{formatCurrency(data.tax, settings?.visibleFields.showDecimals, locale)}</span>
             </div>
           )}
 
           {settings?.visibleFields.total && (
             <div className="flex justify-between py-3" style={{ borderBottom: `2px solid ${primaryColor}` }}>
-              <span className="font-bold text-lg" style={{ color: primaryColor }}>Total:</span>
-              <span className="font-bold text-lg" style={{ color: primaryColor }}>{formatCurrency(data.total, settings?.visibleFields.showDecimals)}</span>
+              <span className="font-bold text-lg" style={{ color: primaryColor }}>{text.total}</span>
+              <span className="font-bold text-lg" style={{ color: primaryColor }}>{formatCurrency(data.total, settings?.visibleFields.showDecimals, locale)}</span>
             </div>
           )}
 
@@ -546,19 +624,19 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
             <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="font-semibold text-gray-900">Link Portal Pembayaran</p>
+                  <p className="font-semibold text-gray-900">{text.portalTitle}</p>
                   <p className="text-xs text-gray-600">
-                    Bagikan link ini ke klien agar bisa melihat invoice dan membayar (jika paket Pro aktif).
+                    {text.portalDescription}
                   </p>
                 </div>
               </div>
 
               {userTier !== 'pro' ? (
                 <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                  Fitur pembayaran invoice tersedia di paket Pro.
+                  {text.proOnly}
                 </div>
               ) : portalLinkLoading ? (
-                <div className="mt-3 text-sm text-gray-600">Menyiapkan link portal...</div>
+                <div className="mt-3 text-sm text-gray-600">{text.preparingPortal}</div>
               ) : portalLink ? (
                 <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
                   <input
@@ -570,20 +648,20 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
                     onClick={async () => {
                       try {
                         await navigator.clipboard.writeText(portalLink);
-                        toast.success('Link portal disalin');
+                        toast.success(text.portalCopied);
                       } catch (err: any) {
-                        toast.error('Gagal menyalin link', { description: err?.message || String(err) });
+                        toast.error(text.portalCopyFailed, { description: err?.message || String(err) });
                       }
                     }}
                     className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"
                   >
-                    Salin Link
+                    {text.copyLink}
                   </button>
                 </div>
               ) : (
                 <div className="mt-3 rounded-lg border border-gray-200 bg-white p-3 text-sm text-gray-700">
-                  Isi <span className="font-semibold">Nama Klien</span> lalu klik{' '}
-                  <span className="font-semibold">Simpan Dokumen</span> agar link portal terbentuk.
+                  {text.portalHintStart} <span className="font-semibold">{text.portalHintMiddle}</span> {text.portalHintEnd}{' '}
+                  <span className="font-semibold">{text.portalHintSave}</span> {text.portalHintLast}
                 </div>
               )}
             </div>
@@ -595,7 +673,7 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
       <div className="mt-16 mb-8">
         <div className="flex justify-end">
           <div className="w-72 text-center">
-            <p className="mb-20 text-gray-700">Hormat kami,</p>
+            <p className="mb-20 text-gray-700">{text.regards}</p>
             {/* Nama dan Jabatan dengan garis di tengah */}
             <div className="pb-2">
               <input
@@ -603,7 +681,7 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
                 value={data.signatureName || ''}
                 onChange={(e) => updateField('signatureName', e.target.value)}
                 className="text-center font-semibold text-gray-900 bg-transparent border-b-2 border-gray-900 focus:outline-none w-48 mb-1"
-                placeholder="Nama"
+                placeholder={text.signatureName}
                 style={{ 
                   color: data.signatureName ? 'inherit' : '#9ca3af',
                   fontStyle: data.signatureName ? 'normal' : 'italic',
@@ -615,7 +693,7 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
                 value={data.signatureTitle || ''}
                 onChange={(e) => updateField('signatureTitle', e.target.value)}
                 className="text-center text-gray-600 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none w-48"
-                placeholder="Jabatan"
+                placeholder={text.signatureTitle}
                 style={{ 
                   color: data.signatureTitle ? 'inherit' : '#9ca3af',
                   fontStyle: data.signatureTitle ? 'normal' : 'italic',

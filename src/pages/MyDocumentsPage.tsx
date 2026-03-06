@@ -1,15 +1,70 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  FileText,
+  Truck,
+  Receipt,
+  Trash2,
+  Eye,
+  Calendar,
+  X,
+  LayoutGrid,
+  List,
+} from 'lucide-react';
 import Navbar from '@/components/Navbar';
+import { useAuth } from '@/contexts/AuthContext';
+import { useI18n } from '@/contexts/I18nContext';
 import { Document } from '@/types/document';
-import { FileText, Truck, Receipt, Trash2, Eye, Calendar, X, LayoutGrid, List } from 'lucide-react';
-import { formatDate } from '@/lib/documentUtils';
-import { Link } from 'react-router-dom';
+import { supabase } from '@/lib/supabase';
+import { formatDateTime, getDocumentTypeLabel } from '@/lib/i18n';
+
+const copy = {
+  en: {
+    loading: 'Loading documents...',
+    title: 'My Documents',
+    subtitle: 'Manage all documents you have created',
+    grid: 'Grid view',
+    list: 'List view',
+    all: 'All',
+    emptyTitle: 'No documents yet',
+    emptyDescription: 'Start creating a new document from the home page.',
+    createDocument: 'Create document',
+    updatedAt: 'Updated',
+    view: 'View',
+    deleteSuccess: 'Document deleted successfully',
+    deleteFailed: 'Failed to delete document',
+    loadFailed: 'Failed to load documents',
+    deleteTitle: 'Delete document?',
+    deleteDescription: 'This action cannot be undone.',
+    cancel: 'Cancel',
+    delete: 'Delete',
+  },
+  id: {
+    loading: 'Memuat dokumen...',
+    title: 'Dokumen Saya',
+    subtitle: 'Kelola semua dokumen yang telah Anda buat',
+    grid: 'Tampilan grid',
+    list: 'Tampilan list',
+    all: 'Semua',
+    emptyTitle: 'Belum ada dokumen',
+    emptyDescription: 'Mulai buat dokumen baru dari halaman utama.',
+    createDocument: 'Buat dokumen',
+    updatedAt: 'Diperbarui',
+    view: 'Lihat',
+    deleteSuccess: 'Dokumen berhasil dihapus',
+    deleteFailed: 'Gagal menghapus dokumen',
+    loadFailed: 'Gagal memuat dokumen',
+    deleteTitle: 'Hapus dokumen?',
+    deleteDescription: 'Tindakan ini tidak bisa dibatalkan.',
+    cancel: 'Batal',
+    delete: 'Hapus',
+  },
+} as const;
 
 export default function MyDocumentsPage() {
   const { user } = useAuth();
+  const { locale } = useI18n();
+  const text = copy[locale];
   const navigate = useNavigate();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,11 +92,10 @@ export default function MyDocumentsPage() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-
       setDocuments(data || []);
     } catch (error) {
       console.error('Error loading documents:', error);
-      alert('Gagal memuat dokumen');
+      alert(text.loadFailed);
     } finally {
       setLoading(false);
     }
@@ -61,20 +115,14 @@ export default function MyDocumentsPage() {
     if (!documentToDelete) return;
 
     try {
-      const { error } = await supabase
-        .from('documents')
-        .delete()
-        .eq('id', documentToDelete)
-        .eq('user_id', user!.id);
-
+      const { error } = await supabase.from('documents').delete().eq('id', documentToDelete).eq('user_id', user!.id);
       if (error) throw error;
-
       setDocuments(documents.filter((doc) => doc.id !== documentToDelete));
       closeDeleteModal();
-      alert('Dokumen berhasil dihapus');
+      alert(text.deleteSuccess);
     } catch (error) {
       console.error('Error deleting document:', error);
-      alert('Gagal menghapus dokumen');
+      alert(text.deleteFailed);
       closeDeleteModal();
     }
   };
@@ -92,30 +140,14 @@ export default function MyDocumentsPage() {
     }
   };
 
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case 'invoice':
-        return 'Invoice';
-      case 'surat_jalan':
-        return 'Surat Jalan';
-      case 'kwitansi':
-        return 'Kwitansi';
-      default:
-        return type;
-    }
-  };
-
-  const filteredDocuments = documents.filter((doc) => {
-    if (filter === 'all') return true;
-    return doc.document_type === filter;
-  });
+  const filteredDocuments = documents.filter((doc) => (filter === 'all' ? true : doc.document_type === filter));
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="flex items-center justify-center h-screen">
-          <div className="text-xl text-gray-600">Memuat dokumen...</div>
+        <div className="flex h-screen items-center justify-center">
+          <div className="text-xl text-gray-600">{text.loading}</div>
         </div>
       </div>
     );
@@ -125,197 +157,177 @@ export default function MyDocumentsPage() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
+      <div className="mx-auto max-w-7xl px-4 py-8">
+        <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Dokumen Saya</h1>
-            <p className="text-gray-600">Kelola semua dokumen yang telah Anda buat</p>
+            <h1 className="mb-2 text-3xl font-bold text-gray-900">{text.title}</h1>
+            <p className="text-gray-600">{text.subtitle}</p>
           </div>
           <div className="flex items-center space-x-2">
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-2 rounded-md transition-colors ${
+              className={`rounded-md p-2 transition-colors ${
                 viewMode === 'grid' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
               }`}
-              title="Tampilan Grid"
+              title={text.grid}
             >
               <LayoutGrid className="h-5 w-5" />
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`p-2 rounded-md transition-colors ${
+              className={`rounded-md p-2 transition-colors ${
                 viewMode === 'list' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
               }`}
-              title="Tampilan List"
+              title={text.list}
             >
               <List className="h-5 w-5" />
             </button>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <div className="flex space-x-4 mb-6">
+        <div className="mb-6 rounded-lg bg-white p-6 shadow-lg">
+          <div className="mb-6 flex flex-wrap gap-4">
             <button
               onClick={() => setFilter('all')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                filter === 'all'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              className={`rounded-lg px-4 py-2 font-medium transition-colors ${
+                filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
             >
-              Semua ({documents.length})
+              {text.all} ({documents.length})
             </button>
             <button
               onClick={() => setFilter('invoice')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                filter === 'invoice'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              className={`rounded-lg px-4 py-2 font-medium transition-colors ${
+                filter === 'invoice' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
             >
-              Invoice ({documents.filter((d) => d.document_type === 'invoice').length})
+              {getDocumentTypeLabel('invoice', locale)} ({documents.filter((d) => d.document_type === 'invoice').length})
             </button>
             <button
               onClick={() => setFilter('surat_jalan')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                filter === 'surat_jalan'
-                  ? 'bg-green-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              className={`rounded-lg px-4 py-2 font-medium transition-colors ${
+                filter === 'surat_jalan' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
             >
-              Surat Jalan ({documents.filter((d) => d.document_type === 'surat_jalan').length})
+              {getDocumentTypeLabel('surat_jalan', locale)} ({documents.filter((d) => d.document_type === 'surat_jalan').length})
             </button>
             <button
               onClick={() => setFilter('kwitansi')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                filter === 'kwitansi'
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              className={`rounded-lg px-4 py-2 font-medium transition-colors ${
+                filter === 'kwitansi' ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
             >
-              Kwitansi ({documents.filter((d) => d.document_type === 'kwitansi').length})
+              {getDocumentTypeLabel('kwitansi', locale)} ({documents.filter((d) => d.document_type === 'kwitansi').length})
             </button>
           </div>
 
           {filteredDocuments.length === 0 ? (
-            <div className="text-center py-12">
-              <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Belum ada dokumen</h3>
-              <p className="text-gray-600 mb-4">
-                Mulai buat dokumen baru dari halaman utama
-            </p>
-            <Link to="/" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-              Buat Dokumen
-            </Link>
-          </div>
-        ) : viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredDocuments.map((doc) => (
-              <div
-                key={doc.id}
-                className="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-shadow"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center space-x-3">
-                    {getIcon(doc.document_type)}
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{doc.title}</h3>
-                      <p className="text-sm text-gray-600">{getTypeLabel(doc.document_type)}</p>
+            <div className="py-12 text-center">
+              <FileText className="mx-auto mb-4 h-16 w-16 text-gray-400" />
+              <h3 className="mb-2 text-lg font-medium text-gray-900">{text.emptyTitle}</h3>
+              <p className="mb-4 text-gray-600">{text.emptyDescription}</p>
+              <Link to="/" className="rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700">
+                {text.createDocument}
+              </Link>
+            </div>
+          ) : viewMode === 'grid' ? (
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {filteredDocuments.map((doc) => (
+                <div key={doc.id} className="rounded-lg border border-gray-200 p-4 transition-shadow hover:shadow-lg">
+                  <div className="mb-3 flex items-start justify-between">
+                    <div className="flex items-center space-x-3">
+                      {getIcon(doc.document_type)}
+                      <div>
+                        <h3 className="font-semibold text-gray-900">{doc.title}</h3>
+                        <p className="text-sm text-gray-600">
+                          {getDocumentTypeLabel(doc.document_type, locale)}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex items-center space-x-2 text-sm text-gray-600 mb-4">
-                  <Calendar className="h-4 w-4" />
-                  <span>{new Date(doc.updated_at).toLocaleString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-                </div>
-
-                <div className="flex space-x-2">
-                  <Link
-                    to="/"
-                    state={{ documentToLoad: doc }}
-                    className="flex-1 flex items-center justify-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                  >
-                    <Eye className="h-4 w-4" />
-                    <span>Lihat</span>
-                  </Link>
-                  <button
-                    onClick={() => openDeleteModal(doc.id)}
-                    className="flex items-center justify-center px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {filteredDocuments.map((doc) => (
-              <div key={doc.id} className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-lg transition-shadow flex items-center p-4">
-                <div className="flex items-center flex-grow">
-                  <div className="flex-shrink-0 mr-4">
-                    {getIcon(doc.document_type)}
+                  <div className="mb-4 flex items-center space-x-2 text-sm text-gray-600">
+                    <Calendar className="h-4 w-4" />
+                    <span>{formatDateTime(doc.updated_at, locale)}</span>
                   </div>
+
+                  <div className="flex space-x-2">
+                    <Link
+                      to="/"
+                      state={{ documentToLoad: doc }}
+                      className="flex flex-1 items-center justify-center space-x-2 rounded bg-blue-600 px-3 py-2 text-white transition-colors hover:bg-blue-700"
+                    >
+                      <Eye className="h-4 w-4" />
+                      <span>{text.view}</span>
+                    </Link>
+                    <button
+                      onClick={() => openDeleteModal(doc.id)}
+                      className="flex items-center justify-center rounded bg-red-600 px-3 py-2 text-white transition-colors hover:bg-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredDocuments.map((doc) => (
+                <div
+                  key={doc.id}
+                  className="flex items-center rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-lg"
+                >
+                  <div className="mr-4 flex-shrink-0">{getIcon(doc.document_type)}</div>
                   <div className="flex-grow">
-                    <h3 className="text-lg font-semibold text-gray-900 truncate">{doc.title}</h3>
-                    <p className="text-sm text-gray-500">{getTypeLabel(doc.document_type)}</p>
+                    <h3 className="truncate text-lg font-semibold text-gray-900">{doc.title}</h3>
+                    <p className="text-sm text-gray-500">{getDocumentTypeLabel(doc.document_type, locale)}</p>
+                  </div>
+                  <div className="flex flex-shrink-0 items-center space-x-6">
+                    <p className="w-56 text-right text-sm text-gray-500">
+                      {text.updatedAt}: {formatDateTime(doc.updated_at, locale)}
+                    </p>
+                    <Link
+                      to="/"
+                      state={{ documentToLoad: doc }}
+                      className="rounded bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700"
+                    >
+                      {text.view}
+                    </Link>
+                    <button
+                      onClick={() => openDeleteModal(doc.id)}
+                      className="rounded bg-red-600 px-4 py-2 text-white transition-colors hover:bg-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center flex-shrink-0 space-x-6">
-                  <p className="text-sm text-gray-500 text-right w-56">
-                    Diperbarui: {new Date(doc.updated_at).toLocaleString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                  <Link
-                    to="/"
-                    state={{ documentToLoad: doc }}
-                    className="p-2 text-blue-600 hover:bg-blue-100 rounded-full"
-                    title="Lihat Dokumen"
-                  >
-                    <Eye className="h-5 w-5" />
-                  </Link>
-                  <button
-                    onClick={() => openDeleteModal(doc.id)}
-                    className="p-2 text-red-600 hover:bg-red-100 rounded-full"
-                    title="Hapus dokumen"
-                  >
-                    <Trash2 className="h-5 w-5" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       {deleteModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold text-gray-900">Konfirmasi Hapus</h3>
-              <button
-                onClick={closeDeleteModal}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X className="h-6 w-6" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-start justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">{text.deleteTitle}</h3>
+                <p className="mt-1 text-sm text-gray-600">{text.deleteDescription}</p>
+              </div>
+              <button onClick={closeDeleteModal} className="rounded p-2 hover:bg-gray-100">
+                <X className="h-4 w-4" />
               </button>
             </div>
-            <p className="text-gray-600 mb-6">
-              Apakah Anda yakin ingin menghapus dokumen ini? Tindakan ini tidak dapat dibatalkan.
-            </p>
-            <div className="flex space-x-4">
+            <div className="flex justify-end gap-3">
               <button
                 onClick={closeDeleteModal}
-                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+                className="rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50"
               >
-                Batal
+                {text.cancel}
               </button>
-              <button
-                onClick={confirmDelete}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-              >
-                Hapus
+              <button onClick={confirmDelete} className="rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700">
+                {text.delete}
               </button>
             </div>
           </div>

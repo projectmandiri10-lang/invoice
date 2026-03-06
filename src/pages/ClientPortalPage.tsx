@@ -2,13 +2,10 @@ import React from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { CreditCard, FileDown, Loader2, X } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
+import { useI18n } from '@/contexts/I18nContext';
 import { InvoiceData } from '@/types/document';
 import { exportInvoiceToPDF, formatCurrency, formatDate } from '@/lib/documentUtils';
 import { invokeEdgeFunction } from '@/lib/edgeFunctions';
-
-interface Client {
-  client_name: string;
-}
 
 interface DocumentRow {
   id: string;
@@ -43,229 +40,298 @@ type InvoiceCreateTxResponse = {
   paymentUrl: string;
   expiresAt: string;
   reference?: string;
-  reused?: boolean;
 };
 
-export default function ClientPortalPage() {
-  const { accessToken } = useParams<{ accessToken: string }>();
-  const [searchParams] = useSearchParams();
+type InvoiceStatusResponse = {
+  status: 'pending' | 'paid' | 'failed' | 'expired';
+  invoiceStatus?: string;
+  transaction?: any;
+};
 
-  const [client, setClient] = React.useState<Client | null>(null);
-  const [documents, setDocuments] = React.useState<DocumentRow[]>([]);
+const copy = {
+  en: {
+    loading: 'Loading client portal...',
+    title: 'Client Portal',
+    subtitle: 'Your invoice history',
+    refresh: 'Refresh',
+    empty: 'There are no invoices for this client yet.',
+    number: 'Invoice No.',
+    date: 'Date',
+    total: 'Total',
+    status: 'Status',
+    actions: 'Actions',
+    paid: 'Paid',
+    unpaid: 'Unpaid',
+    download: 'Download PDF',
+    payNow: 'Pay Now',
+    payTitle: 'Pay Invoice',
+    close: 'Close',
+    loadingMethods: 'Loading payment methods...',
+    noMethods: 'Payment methods are not available.',
+    fee: 'Fee',
+    continuePay: 'Continue to payment',
+    redirecting: 'Redirecting...',
+    poweredBy: 'Powered by idCashier Invoice Generator',
+    paymentSuccess: 'Payment successful',
+    paymentSuccessDescription: 'Invoice has been marked as paid.',
+    paymentFailed: 'Payment not completed',
+    paymentFailedDescription: 'Please try again or choose another payment method.',
+    paymentPending: 'Payment is being processed',
+    paymentPendingDescription: 'Please wait a few moments.',
+    statusFailed: 'Failed to check payment status',
+    methodsFailed: 'Failed to load payment methods',
+    createFailed: 'Failed to create transaction',
+    downloadFailed: 'Failed to download PDF.',
+  },
+  id: {
+    loading: 'Memuat portal klien...',
+    title: 'Portal Klien',
+    subtitle: 'Riwayat invoice Anda',
+    refresh: 'Muat ulang',
+    empty: 'Belum ada invoice untuk klien ini.',
+    number: 'No. Invoice',
+    date: 'Tanggal',
+    total: 'Total',
+    status: 'Status',
+    actions: 'Aksi',
+    paid: 'Lunas',
+    unpaid: 'Belum Lunas',
+    download: 'Unduh PDF',
+    payNow: 'Bayar Sekarang',
+    payTitle: 'Bayar Invoice',
+    close: 'Tutup',
+    loadingMethods: 'Memuat metode pembayaran...',
+    noMethods: 'Metode pembayaran tidak tersedia.',
+    fee: 'Biaya',
+    continuePay: 'Lanjut Bayar',
+    redirecting: 'Mengalihkan...',
+    poweredBy: 'Disediakan oleh idCashier Invoice Generator',
+    paymentSuccess: 'Pembayaran berhasil',
+    paymentSuccessDescription: 'Invoice sudah ditandai lunas.',
+    paymentFailed: 'Pembayaran belum berhasil',
+    paymentFailedDescription: 'Silakan coba lagi atau pilih metode lain.',
+    paymentPending: 'Pembayaran sedang diproses',
+    paymentPendingDescription: 'Silakan tunggu beberapa saat.',
+    statusFailed: 'Gagal memeriksa status pembayaran',
+    methodsFailed: 'Gagal memuat metode pembayaran',
+    createFailed: 'Gagal membuat transaksi',
+    downloadFailed: 'Gagal mengunduh PDF.',
+  },
+} as const;
+
+export default function ClientPortalPage() {
+  const { accessToken = '' } = useParams<{ accessToken: string }>();
+  const { locale } = useI18n();
+  const text = copy[locale];
+  const [params, setParams] = useSearchParams();
+  const paidOrderId = params.get('paidOrderId') || '';
+
   const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
+  const [clientName, setClientName] = React.useState('');
+  const [documents, setDocuments] = React.useState<DocumentRow[]>([]);
+  const [selectedDocument, setSelectedDocument] = React.useState<DocumentRow | null>(null);
+  const [paymentMethods, setPaymentMethods] = React.useState<PaymentMethod[]>([]);
+  const [loadingMethods, setLoadingMethods] = React.useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = React.useState('');
+  const [creatingPayment, setCreatingPayment] = React.useState(false);
 
   const fetchPortal = React.useCallback(async () => {
-    if (!accessToken) {
-      setError('Token akses tidak valid.');
-      setLoading(false);
-      return;
-    }
-
+    if (!accessToken) return;
     setLoading(true);
-    setError(null);
     try {
       const portalData = await invokeEdgeFunction<PortalResponse>('client-portal-data', { accessToken });
-      setClient({ client_name: portalData.client.client_name });
-      setDocuments(portalData.documents || []);
-    } catch (err: any) {
-      setError(err?.message || 'Gagal memuat data portal.');
+      setClientName(portalData.client.client_name);
+      setDocuments((portalData.documents || []).filter((doc) => doc.document_type === 'invoice'));
     } finally {
       setLoading(false);
     }
   }, [accessToken]);
 
   React.useEffect(() => {
-    fetchPortal();
-  }, [fetchPortal]);
+    fetchPortal().catch((err) => {
+      console.error('Failed to fetch portal:', err);
+      toast.error(locale === 'id' ? 'Gagal memuat portal klien' : 'Failed to load client portal', {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    });
+  }, [fetchPortal, locale]);
 
-  // After returning from Duitku (returnUrl), verify status and refresh portal data
-  const paidOrderId = searchParams.get('paidOrderId') || '';
   React.useEffect(() => {
-    if (!accessToken || !paidOrderId) return;
+    if (!paidOrderId) return;
 
     let cancelled = false;
-    (async () => {
+    const checkStatus = async () => {
       try {
-        const res = await invokeEdgeFunction<{ status: string }>('invoice-status', {
+        const res = await invokeEdgeFunction<InvoiceStatusResponse>('invoice-status', {
           accessToken,
           merchantOrderId: paidOrderId,
         });
-
         if (cancelled) return;
         if (res.status === 'paid') {
-          toast.success('Pembayaran berhasil', { description: 'Invoice sudah ditandai lunas.' });
+          toast.success(text.paymentSuccess, { description: text.paymentSuccessDescription });
         } else if (res.status === 'failed' || res.status === 'expired') {
-          toast.error('Pembayaran belum berhasil', { description: 'Silakan coba lagi atau pilih metode lain.' });
+          toast.error(text.paymentFailed, { description: text.paymentFailedDescription });
         } else {
-          toast.info('Pembayaran sedang diproses', { description: 'Silakan tunggu beberapa saat.' });
+          toast.info(text.paymentPending, { description: text.paymentPendingDescription });
         }
       } catch (err: any) {
         if (!cancelled) {
-          toast.error('Gagal memeriksa status pembayaran', { description: err?.message || String(err) });
+          toast.error(text.statusFailed, { description: err?.message || String(err) });
         }
       } finally {
         if (!cancelled) {
           fetchPortal().catch(() => {});
+          params.delete('paidOrderId');
+          setParams(params, { replace: true });
         }
       }
-    })();
+    };
 
+    checkStatus();
     return () => {
       cancelled = true;
     };
-  }, [accessToken, paidOrderId, fetchPortal]);
+  }, [accessToken, paidOrderId, fetchPortal, params, setParams, text]);
 
   const handleDownload = async (doc: DocumentRow) => {
     try {
-      const settings =
-        doc.settings ||
-        ({
-          colorScheme: { primary: '#2563eb', secondary: '#059669', accent: '#9333ea' },
-          font: { family: 'Arial', size: 14 },
-          layout: { margin: 20, spacing: 16, alignment: 'left' },
-          visibleFields: {
-            logo: true,
-            companyNPWP: true,
-            dueDate: true,
-            notes: true,
-            paymentInfo: true,
-            showPrice: true,
-            showDecimals: true,
-            paymentGateway: false,
-          },
-        } as any);
+      const settings = {
+        ...doc.settings,
+        visibleFields: {
+          companyNPWP: true,
+          dueDate: true,
+          subtotal: true,
+          discount: false,
+          tax: true,
+          total: true,
+          notes: true,
+          paymentInfo: true,
+          showDecimals: false,
+          ...(doc.settings?.visibleFields || {}),
+        },
+      };
 
-      await exportInvoiceToPDF(doc.content, settings, 'pro');
+      await exportInvoiceToPDF(doc.content, settings, 'pro', locale);
     } catch (err) {
       console.error('Failed to download PDF:', err);
-      toast.error('Gagal mengunduh PDF.');
+      toast.error(text.downloadFailed);
     }
   };
 
-  const [paymentOpen, setPaymentOpen] = React.useState(false);
-  const [paymentDoc, setPaymentDoc] = React.useState<DocumentRow | null>(null);
-  const [methodsLoading, setMethodsLoading] = React.useState(false);
-  const [methods, setMethods] = React.useState<PaymentMethod[]>([]);
-  const [selectedMethod, setSelectedMethod] = React.useState<string>('');
-  const [creatingPayment, setCreatingPayment] = React.useState(false);
-
-  const openPayment = async (doc: DocumentRow) => {
-    if (!accessToken) return;
-    setPaymentDoc(doc);
-    setPaymentOpen(true);
-    setMethods([]);
-    setSelectedMethod('');
-    setCreatingPayment(false);
-    setMethodsLoading(true);
-
+  const openPaymentModal = async (doc: DocumentRow) => {
     try {
+      setSelectedDocument(doc);
+      setLoadingMethods(true);
+      setPaymentMethods([]);
+      setSelectedPaymentMethod('');
+
       const res = await invokeEdgeFunction<InvoicePaymentMethodsResponse>('invoice-payment-methods', {
         accessToken,
         documentId: doc.id,
       });
-      setMethods(res.methods || []);
+
+      setPaymentMethods(res.methods || []);
     } catch (err: any) {
-      toast.error('Gagal memuat metode pembayaran', { description: err?.message || String(err) });
-      setPaymentOpen(false);
-      setPaymentDoc(null);
+      toast.error(text.methodsFailed, { description: err?.message || String(err) });
+      setSelectedDocument(null);
     } finally {
-      setMethodsLoading(false);
+      setLoadingMethods(false);
     }
   };
 
   const startPayment = async () => {
-    if (!accessToken || !paymentDoc || !selectedMethod) return;
-    setCreatingPayment(true);
+    if (!selectedDocument || !selectedPaymentMethod) return;
+
     try {
+      setCreatingPayment(true);
       const res = await invokeEdgeFunction<InvoiceCreateTxResponse>('invoice-create-transaction', {
         accessToken,
-        documentId: paymentDoc.id,
-        paymentMethod: selectedMethod,
+        documentId: selectedDocument.id,
+        paymentMethod: selectedPaymentMethod,
       });
       window.location.href = res.paymentUrl;
     } catch (err: any) {
-      toast.error('Gagal membuat transaksi', { description: err?.message || String(err) });
+      toast.error(text.createFailed, { description: err?.message || String(err) });
       setCreatingPayment(false);
     }
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Memuat Portal...</div>;
-  }
-
-  if (error) {
-    return <div className="min-h-screen flex items-center justify-center text-red-600">{error}</div>;
+    return <div className="flex min-h-screen items-center justify-center">{text.loading}</div>;
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <div className="max-w-4xl mx-auto">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Portal Klien</h1>
-          <p className="text-xl text-gray-600">Selamat datang, {client?.client_name}</p>
-        </header>
-
-        <main className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-semibold">Riwayat Invoice Anda</h2>
+    <div className="min-h-screen bg-gray-50 px-4 py-10">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-8 rounded-2xl bg-white p-6 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800">{text.title}</h1>
+              <p className="mt-1 text-gray-600">{clientName}</p>
+            </div>
             <button
               onClick={() => fetchPortal()}
-              className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-200"
+              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
             >
-              Refresh
+              {text.refresh}
             </button>
           </div>
+        </div>
 
+        <div className="rounded-2xl bg-white p-6 shadow-sm">
+          <h2 className="mb-4 text-2xl font-semibold">{text.subtitle}</h2>
           {documents.length === 0 ? (
-            <p className="text-gray-600">Belum ada invoice untuk klien ini.</p>
+            <p className="text-gray-600">{text.empty}</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
+              <table className="min-w-full">
                 <thead>
-                  <tr className="border-b">
-                    <th className="p-4">No. Invoice</th>
-                    <th className="p-4">Tanggal</th>
-                    <th className="p-4">Total</th>
-                    <th className="p-4">Status</th>
-                    <th className="p-4">Aksi</th>
+                  <tr className="bg-gray-50 text-left text-sm text-gray-600">
+                    <th className="p-4">{text.number}</th>
+                    <th className="p-4">{text.date}</th>
+                    <th className="p-4">{text.total}</th>
+                    <th className="p-4">{text.status}</th>
+                    <th className="p-4">{text.actions}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {documents.map((doc) => {
+                    const paid = doc.status === 'paid';
                     const paymentEnabled = Boolean((doc.settings as any)?.visibleFields?.paymentGateway);
-                    const paid = String(doc.status || '').toLowerCase() === 'paid';
                     return (
-                      <tr key={doc.id} className="border-b hover:bg-gray-50">
-                        <td className="p-4 font-medium">{doc.content.invoiceNumber}</td>
-                        <td className="p-4">{formatDate(doc.content.invoiceDate)}</td>
-                        <td className="p-4">{formatCurrency(doc.content.total)}</td>
+                      <tr key={doc.id} className="border-t border-gray-100">
+                        <td className="p-4 font-medium text-gray-900">{doc.content.invoiceNumber}</td>
+                        <td className="p-4 text-gray-600">{formatDate(doc.content.invoiceDate, locale)}</td>
+                        <td className="p-4 text-gray-600">{formatCurrency(doc.content.total, false, locale)}</td>
                         <td className="p-4">
                           <span
-                            className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                              paid ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                            className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                              paid ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
                             }`}
                           >
-                            {paid ? 'Lunas' : 'Belum Lunas'}
+                            {paid ? text.paid : text.unpaid}
                           </span>
                         </td>
-                        <td className="p-4 flex space-x-2">
-                          <button
-                            onClick={() => handleDownload(doc)}
-                            className="text-blue-600 hover:text-blue-800"
-                            title="Unduh PDF"
-                          >
-                            <FileDown />
-                          </button>
-                          {!paid && paymentEnabled && (
+                        <td className="p-4">
+                          <div className="flex flex-wrap gap-2">
                             <button
-                              onClick={() => openPayment(doc)}
-                              className="text-green-600 hover:text-green-800"
-                              title="Bayar Sekarang"
+                              onClick={() => handleDownload(doc)}
+                              className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                              title={text.download}
                             >
-                              <CreditCard />
+                              <FileDown className="h-4 w-4" />
                             </button>
-                          )}
+                            {!paid && paymentEnabled && (
+                              <button
+                                onClick={() => openPaymentModal(doc)}
+                                className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                                title={text.payNow}
+                              >
+                                <CreditCard className="h-4 w-4" />
+                                <span>{text.payNow}</span>
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -274,98 +340,86 @@ export default function ClientPortalPage() {
               </table>
             </div>
           )}
-        </main>
+        </div>
 
-        {paymentOpen && paymentDoc && (
+        {selectedDocument && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-lg rounded-xl bg-white shadow-xl">
-              <div className="flex items-center justify-between border-b px-6 py-4">
-                <div>
-                  <h2 className="text-lg font-bold text-gray-900">Bayar Invoice</h2>
-                  <p className="text-sm text-gray-600">{paymentDoc.content.invoiceNumber}</p>
-                </div>
+            <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-lg font-bold text-gray-900">{text.payTitle}</h2>
                 <button
-                  onClick={() => {
-                    setPaymentOpen(false);
-                    setPaymentDoc(null);
-                  }}
-                  className="rounded p-2 hover:bg-gray-100"
-                  aria-label="Tutup"
-                  disabled={creatingPayment}
+                  onClick={() => setSelectedDocument(null)}
+                  className="rounded p-2 text-gray-500 hover:bg-gray-100"
+                  aria-label={text.close}
                 >
-                  <X className="h-5 w-5" />
+                  <X className="h-4 w-4" />
                 </button>
               </div>
 
-              <div className="px-6 py-5">
-                {methodsLoading ? (
-                  <div className="flex items-center gap-2 text-gray-700">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Memuat metode pembayaran...</span>
-                  </div>
-                ) : methods.length === 0 ? (
-                  <p className="text-sm text-gray-600">Metode pembayaran tidak tersedia.</p>
-                ) : (
-                  <div className="max-h-64 overflow-auto rounded-lg border border-gray-200">
-                    {methods.map((m) => {
-                      const feeNum = m.totalFee != null ? Number(m.totalFee) : NaN;
-                      return (
-                        <label
-                          key={m.paymentMethod}
-                          className="flex cursor-pointer items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0 hover:bg-gray-50"
-                        >
-                          <div className="flex items-center gap-3">
-                            <input
-                              type="radio"
-                              name="portalPaymentMethod"
-                              checked={selectedMethod === m.paymentMethod}
-                              onChange={() => setSelectedMethod(m.paymentMethod)}
-                              disabled={creatingPayment}
-                            />
-                            <div>
-                              <div className="text-sm font-semibold text-gray-900">{m.paymentName}</div>
-                              {m.totalFee ? (
-                                <div className="text-xs text-gray-500">
-                                  Biaya: Rp {Number.isFinite(feeNum) ? feeNum.toLocaleString('id-ID') : m.totalFee}
-                                </div>
-                              ) : null}
-                            </div>
+              {loadingMethods ? (
+                <div className="flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-4 text-sm text-gray-600">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>{text.loadingMethods}</span>
+                </div>
+              ) : paymentMethods.length === 0 ? (
+                <p className="text-sm text-gray-600">{text.noMethods}</p>
+              ) : (
+                <div className="space-y-2">
+                  {paymentMethods.map((method) => {
+                    const feeNum = Number(method.totalFee || 0);
+                    const checked = selectedPaymentMethod === method.paymentMethod;
+                    return (
+                      <button
+                        key={method.paymentMethod}
+                        type="button"
+                        onClick={() => setSelectedPaymentMethod(method.paymentMethod)}
+                        className={`flex w-full items-center justify-between rounded-lg border px-3 py-3 text-left transition ${
+                          checked ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-blue-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          {method.paymentImage ? (
+                            <img src={method.paymentImage} alt={method.paymentName} className="h-8 w-8 object-contain" />
+                          ) : (
+                            <CreditCard className="h-5 w-5 text-gray-500" />
+                          )}
+                          <div>
+                            <div className="font-medium text-gray-900">{method.paymentName}</div>
+                            {Number.isFinite(feeNum) && feeNum > 0 && (
+                              <div className="text-xs text-gray-500">
+                                {text.fee}: {formatCurrency(feeNum, false, locale)}
+                              </div>
+                            )}
                           </div>
-                          {m.paymentImage ? <img src={m.paymentImage} alt={m.paymentName} className="h-8 w-auto" /> : null}
-                        </label>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+                        </div>
+                        <div className={`h-4 w-4 rounded-full border ${checked ? 'border-blue-600 bg-blue-600' : 'border-gray-300'}`} />
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
 
-              <div className="flex items-center justify-end gap-3 border-t px-6 py-4">
+              <div className="mt-6 flex justify-end gap-3">
                 <button
-                  onClick={() => {
-                    setPaymentOpen(false);
-                    setPaymentDoc(null);
-                  }}
-                  className="rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100"
-                  disabled={creatingPayment}
+                  onClick={() => setSelectedDocument(null)}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
                 >
-                  Batal
+                  {text.close}
                 </button>
                 <button
                   onClick={startPayment}
-                  className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 font-semibold text-white hover:bg-green-700 disabled:opacity-60"
-                  disabled={!selectedMethod || creatingPayment || methodsLoading}
+                  disabled={!selectedPaymentMethod || creatingPayment}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
                 >
-                  {creatingPayment ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  <span>{creatingPayment ? 'Mengalihkan...' : 'Lanjut Bayar'}</span>
+                  {creatingPayment ? text.redirecting : text.continuePay}
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        <footer className="text-center mt-8 text-gray-500 text-sm">Disediakan oleh idCashier Invoice Generator</footer>
+        <footer className="mt-8 text-center text-sm text-gray-500">{text.poweredBy}</footer>
       </div>
-
       <Toaster position="bottom-right" richColors />
     </div>
   );

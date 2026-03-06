@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { supabase } from '@/lib/supabase';
 import { Settings, Upload, Palette, Type, Layout, Eye, EyeOff } from 'lucide-react';
 import type { AppPlan } from '@/contexts/AuthContext';
+import { useI18n } from '@/contexts/I18nContext';
 
 interface DocumentSettings {
   logoUrl?: string;
@@ -74,6 +74,77 @@ const defaultSettings: DocumentSettings = {
   },
 };
 
+const copy = {
+  en: {
+    title: 'Settings',
+    reset: 'Reset',
+    appearance: 'Appearance',
+    layout: 'Layout',
+    colorScheme: 'Color scheme',
+    primaryColor: 'Primary color',
+    secondaryColor: 'Secondary color',
+    accentColor: 'Accent color',
+    font: 'Font',
+    fontFamily: 'Font family',
+    fontSize: 'Font size',
+    visibleFields: 'Choose which fields appear in the document.',
+    show: 'Show',
+    hide: 'Hide',
+    showPrice: 'Show price',
+    showDecimals: 'Show decimals',
+    margin: 'Margin',
+    spacing: 'Spacing',
+    alignment: 'Alignment',
+    left: 'Left',
+    center: 'Center',
+    right: 'Right',
+    logo: 'Logo',
+    companyNPWP: 'Company tax ID',
+    dueDate: 'Due date',
+    subtotal: 'Subtotal',
+    discount: 'Discount',
+    tax: 'Tax',
+    total: 'Total',
+    notes: 'Notes',
+    paymentInfo: 'Payment info',
+    paymentGateway: 'Pay button',
+  },
+  id: {
+    title: 'Pengaturan',
+    reset: 'Reset',
+    appearance: 'Tampilan',
+    layout: 'Layout',
+    colorScheme: 'Skema warna',
+    primaryColor: 'Warna utama',
+    secondaryColor: 'Warna sekunder',
+    accentColor: 'Warna aksen',
+    font: 'Font',
+    fontFamily: 'Font family',
+    fontSize: 'Ukuran font',
+    visibleFields: 'Pilih field yang ingin ditampilkan dalam dokumen.',
+    show: 'Tampil',
+    hide: 'Sembunyikan',
+    showPrice: 'Tampilkan harga',
+    showDecimals: 'Tampilkan desimal',
+    margin: 'Margin',
+    spacing: 'Spasi',
+    alignment: 'Perataan',
+    left: 'Kiri',
+    center: 'Tengah',
+    right: 'Kanan',
+    logo: 'Logo',
+    companyNPWP: 'NPWP perusahaan',
+    dueDate: 'Tanggal jatuh tempo',
+    subtotal: 'Subtotal',
+    discount: 'Diskon',
+    tax: 'Pajak',
+    total: 'Total',
+    notes: 'Catatan',
+    paymentInfo: 'Info pembayaran',
+    paymentGateway: 'Tombol bayar',
+  },
+} as const;
+
 export default function SettingsPanel({
   documentType,
   settings,
@@ -81,6 +152,8 @@ export default function SettingsPanel({
   effectivePlan = 'free',
   onRequestUpgradePro,
 }: SettingsPanelProps) {
+  const { locale } = useI18n();
+  const text = copy[locale];
   const [activeTab, setActiveTab] = useState<'appearance' | 'layout'>('appearance');
   const [uploading, setUploading] = useState(false);
 
@@ -138,18 +211,45 @@ export default function SettingsPanel({
     onChange(defaultSettings);
   };
 
+  const visibleFieldLabel = (field: keyof DocumentSettings['visibleFields']) => {
+    switch (field) {
+      case 'logo':
+        return text.logo;
+      case 'companyNPWP':
+        return text.companyNPWP;
+      case 'dueDate':
+        return text.dueDate;
+      case 'subtotal':
+        return text.subtotal;
+      case 'discount':
+        return text.discount;
+      case 'tax':
+        return text.tax;
+      case 'total':
+        return text.total;
+      case 'notes':
+        return text.notes;
+      case 'paymentInfo':
+        return text.paymentInfo;
+      case 'paymentGateway':
+        return text.paymentGateway;
+      default:
+        return field;
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-lg p-6 h-full overflow-y-auto">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-bold text-gray-900 flex items-center">
           <Settings className="h-5 w-5 mr-2" />
-          Pengaturan
+          {text.title}
         </h3>
         <button
           onClick={resetSettings}
           className="text-sm text-blue-600 hover:text-blue-700"
         >
-          Reset
+          {text.reset}
         </button>
       </div>
 
@@ -162,7 +262,7 @@ export default function SettingsPanel({
               : 'text-gray-600 hover:text-blue-600'
           }`}
         >
-          Tampilan
+          {text.appearance}
         </button>
         <button
           onClick={() => setActiveTab('layout')}
@@ -172,7 +272,7 @@ export default function SettingsPanel({
               : 'text-gray-600 hover:text-blue-600'
           }`}
         >
-          Layout
+          {text.layout}
         </button>
       </div>
 
@@ -181,11 +281,11 @@ export default function SettingsPanel({
           <div>
             <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
               <Palette className="h-4 w-4 mr-2" />
-              Skema Warna
+              {text.colorScheme}
             </label>
             <div className="space-y-3">
               <div>
-                <label className="text-xs text-gray-600">Warna Utama</label>
+                <label className="text-xs text-gray-600">{text.primaryColor}</label>
                 <div className="flex items-center space-x-2">
                   <input
                     type="color"
@@ -202,7 +302,7 @@ export default function SettingsPanel({
                 </div>
               </div>
               <div>
-                <label className="text-xs text-gray-600">Warna Sekunder</label>
+                <label className="text-xs text-gray-600">{text.secondaryColor}</label>
                 <div className="flex items-center space-x-2">
                   <input
                     type="color"
@@ -219,7 +319,7 @@ export default function SettingsPanel({
                 </div>
               </div>
               <div>
-                <label className="text-xs text-gray-600">Warna Aksen</label>
+                <label className="text-xs text-gray-600">{text.accentColor}</label>
                 <div className="flex items-center space-x-2">
                   <input
                     type="color"
@@ -241,11 +341,11 @@ export default function SettingsPanel({
           <div>
             <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
               <Type className="h-4 w-4 mr-2" />
-              Font
+              {text.font}
             </label>
             <div className="space-y-3">
               <div>
-                <label className="text-xs text-gray-600">Font Family</label>
+                <label className="text-xs text-gray-600">{text.fontFamily}</label>
                 <select
                   value={settings.font.family}
                   onChange={(e) => updateFont('family', e.target.value)}
@@ -259,7 +359,7 @@ export default function SettingsPanel({
                 </select>
               </div>
               <div>
-                <label className="text-xs text-gray-600">Ukuran Font: {settings.font.size}px</label>
+                <label className="text-xs text-gray-600">{text.fontSize}: {settings.font.size}px</label>
                 <input
                   type="range"
                   min="10"
@@ -276,7 +376,7 @@ export default function SettingsPanel({
 
           <div className="space-y-4">
             <p className="text-sm text-gray-600 mb-4">
-              Pilih field yang ingin ditampilkan dalam dokumen
+              {text.visibleFields}
             </p>
             {Object.entries(settings.visibleFields)
               .filter(([field]) => !['showPrice', 'showDecimals'].includes(field))
@@ -289,16 +389,7 @@ export default function SettingsPanel({
               .map(([field, visible]) => (
               <div key={field} className="flex items-center justify-between">
                 <span className="text-sm text-gray-700 capitalize">
-                  {field === 'logo' ? 'Logo' :
-                  field === 'companyNPWP' ? 'NPWP Perusahaan' :
-                  field === 'dueDate' ? 'Tanggal Jatuh Tempo' :
-                  field === 'subtotal' ? 'Subtotal' :
-                  field === 'discount' ? 'Diskon' :
-                  field === 'tax' ? 'Pajak' :
-                  field === 'total' ? 'Total' :
-                  field === 'notes' ? 'Catatan' :
-                  field === 'paymentInfo' ? 'Info Pembayaran' : 
-                  field === 'paymentGateway' ? 'Tombol Bayar' : field}
+                  {visibleFieldLabel(field as keyof DocumentSettings['visibleFields'])}
                 </span>
                 <button
                   onClick={() => toggleField(field as keyof DocumentSettings['visibleFields'])}
@@ -311,12 +402,12 @@ export default function SettingsPanel({
                   {visible ? (
                     <>
                       <Eye className="h-4 w-4" />
-                      <span className="text-xs">Tampil</span>
+                      <span className="text-xs">{text.show}</span>
                     </>
                   ) : (
                     <>
                       <EyeOff className="h-4 w-4" />
-                      <span className="text-xs">Sembunyikan</span>
+                      <span className="text-xs">{text.hide}</span>
                     </>
                   )}
                 </button>
@@ -326,7 +417,7 @@ export default function SettingsPanel({
             {documentType === 'surat_jalan' && (
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-700 capitalize">
-                  Tampilkan Harga
+                  {text.showPrice}
                 </span>
                 <button
                   onClick={() => toggleField('showPrice')}
@@ -339,12 +430,12 @@ export default function SettingsPanel({
                   {settings.visibleFields.showPrice ? (
                     <>
                       <Eye className="h-4 w-4" />
-                      <span className="text-xs">Tampil</span>
+                      <span className="text-xs">{text.show}</span>
                     </>
                   ) : (
                     <>
                       <EyeOff className="h-4 w-4" />
-                      <span className="text-xs">Sembunyikan</span>
+                      <span className="text-xs">{text.hide}</span>
                     </>
                   )}
                 </button>
@@ -353,7 +444,7 @@ export default function SettingsPanel({
 
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-700 capitalize">
-                Tampilkan Desimal
+                {text.showDecimals}
               </span>
               <button
                 onClick={() => toggleField('showDecimals')}
@@ -366,12 +457,12 @@ export default function SettingsPanel({
                 {settings.visibleFields.showDecimals ? (
                   <>
                     <Eye className="h-4 w-4" />
-                    <span className="text-xs">Tampil</span>
+                    <span className="text-xs">{text.show}</span>
                   </>
                 ) : (
                   <>
                     <EyeOff className="h-4 w-4" />
-                    <span className="text-xs">Sembunyikan</span>
+                    <span className="text-xs">{text.hide}</span>
                   </>
                 )}
               </button>
@@ -385,7 +476,7 @@ export default function SettingsPanel({
           <div>
             <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
               <Layout className="h-4 w-4 mr-2" />
-              Margin: {settings.layout.margin}mm
+              {text.margin}: {settings.layout.margin}mm
             </label>
             <input
               type="range"
@@ -399,7 +490,7 @@ export default function SettingsPanel({
 
           <div>
             <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
-              Spacing: {settings.layout.spacing}px
+              {text.spacing}: {settings.layout.spacing}px
             </label>
             <input
               type="range"
@@ -413,7 +504,7 @@ export default function SettingsPanel({
 
           <div>
             <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
-              Alignment
+              {text.alignment}
             </label>
             <div className="flex space-x-2">
               {['left', 'center', 'right'].map((align) => (
@@ -426,7 +517,7 @@ export default function SettingsPanel({
                       : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                   }`}
                 >
-                  {align === 'left' ? 'Kiri' : align === 'center' ? 'Tengah' : 'Kanan'}
+                  {align === 'left' ? text.left : align === 'center' ? text.center : text.right}
                 </button>
               ))}
             </div>

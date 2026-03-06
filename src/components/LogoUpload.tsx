@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Upload } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import type { AppPlan } from '@/contexts/AuthContext';
+import { useI18n } from '@/contexts/I18nContext';
 
 interface LogoUploadProps {
   logoUrl?: string;
@@ -9,101 +10,91 @@ interface LogoUploadProps {
   userTier?: AppPlan;
 }
 
+const copy = {
+  en: {
+    sizeLimit: 'Maximum file size is 2MB',
+    uploadSuccess: 'Logo uploaded successfully',
+    uploadFailed: 'Failed to upload logo',
+    upload: 'Upload logo',
+    ownLogo: 'Use your own logo',
+    ownLogoDescription: 'Upgrade to Starter (Rp 100.000/month) to add your company logo.',
+    uploading: 'Uploading...',
+    formats: 'PNG, JPG, SVG (max 2MB)',
+    logoAlt: 'Company logo',
+  },
+  id: {
+    sizeLimit: 'Ukuran file maksimal 2MB',
+    uploadSuccess: 'Logo berhasil diupload',
+    uploadFailed: 'Gagal upload logo',
+    upload: 'Unggah logo',
+    ownLogo: 'Gunakan Logo Sendiri',
+    ownLogoDescription: 'Upgrade ke Starter (Rp 100.000/bulan) untuk menambahkan logo perusahaan Anda.',
+    uploading: 'Mengunggah...',
+    formats: 'PNG, JPG, SVG (maks 2MB)',
+    logoAlt: 'Logo perusahaan',
+  },
+} as const;
+
 export default function LogoUpload({ logoUrl, onLogoChange, userTier = 'free' }: LogoUploadProps) {
+  const { locale } = useI18n();
+  const text = copy[locale];
   const [uploading, setUploading] = useState(false);
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (!file) return;
 
     if (file.size > 2 * 1024 * 1024) {
-      alert('Ukuran file maksimal 2MB');
+      alert(text.sizeLimit);
       return;
     }
 
     setUploading(true);
 
     try {
-      // Create a unique filename
       const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `${Date.now()}.${fileExt}`;
 
-      // Upload to Supabase storage
-      const { error: uploadError } = await supabase.storage
-        .from('logos')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-
+      const { error: uploadError } = await supabase.storage.from('logos').upload(filePath, file, { upsert: true });
       if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data } = supabase.storage
-        .from('logos')
-        .getPublicUrl(fileName);
-
+      const { data } = supabase.storage.from('logos').getPublicUrl(filePath);
       onLogoChange(data.publicUrl);
-      alert('Logo berhasil diupload');
+      alert(text.uploadSuccess);
     } catch (error: any) {
-      console.error('Error uploading logo:', error);
-      alert('Gagal upload logo: ' + (error.message || 'Terjadi kesalahan'));
+      alert(`${text.uploadFailed}: ${error.message || 'Unknown error'}`);
     } finally {
       setUploading(false);
+      if (event.target) {
+        event.target.value = '';
+      }
     }
   };
 
-  const isIndonesia = navigator.language.startsWith('id');
-  const starterPrice = isIndonesia ? 'Rp 100.000/bulan' : '$5/month';
-  
+  if (userTier === 'free') {
+    return (
+      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+        <h3 className="mb-1 font-semibold text-amber-900">{text.ownLogo}</h3>
+        <p className="text-sm text-amber-800">{text.ownLogoDescription}</p>
+      </div>
+    );
+  }
+
   return (
-        <div className="mb-4 relative">
-      <label className="flex items-center text-sm font-medium text-gray-700 mb-2 cursor-pointer no-print">
-        <Upload className="h-4 w-4 mr-2" />
-        <span>{isIndonesia ? 'Unggah Logo' : 'Upload Logo'}</span>
+    <div className="space-y-3">
+      <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
+        <Upload className="h-4 w-4" />
+        <span>{uploading ? text.uploading : text.upload}</span>
+        <input type="file" accept="image/png,image/jpeg,image/svg+xml" onChange={handleLogoUpload} className="hidden" />
       </label>
-      
-      {logoUrl && userTier !== 'free' && (
-        <div className="mb-2">
-          <img
-            src={logoUrl}
-            alt="Company Logo"
-            className="h-16 w-auto border border-gray-300 rounded"
-          />
+
+      {logoUrl && (
+        <div className="rounded-lg border border-gray-200 bg-white p-3">
+          <img src={logoUrl} alt={text.logoAlt} className="max-h-20 w-auto object-contain" />
         </div>
       )}
-      
-      {userTier !== 'free' ? (
-        <>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleLogoUpload}
-            disabled={uploading}
-            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer no-print"
-          />
-          <p className="text-xs text-gray-500 mt-1 no-print">PNG, JPG, SVG (max 2MB)</p>
-        </>
-      ) : (
-        <div className="mt-2 p-4 bg-gray-100 rounded-lg text-center">
-          <p className="text-sm font-medium text-gray-800">
-            {isIndonesia ? 'Gunakan Logo Sendiri' : 'Use Your Own Logo'}
-          </p>
-          <p className="text-xs text-gray-600">
-            {isIndonesia 
-              ? `Upgrade ke Starter (${starterPrice}) untuk menambahkan logo perusahaan Anda.`
-              : `Upgrade to Starter (${starterPrice}) to add your company logo.`
-            }
-          </p>
-        </div>
-      )}
-      
-      {uploading && (
-        <div className="flex items-center mt-2 text-blue-600">
-          <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full mr-2"></div>
-          <span className="text-sm">{isIndonesia ? 'Mengunggah...' : 'Uploading...'}</span>
-        </div>
-      )}
+
+      <p className="text-xs text-gray-500 no-print">{text.formats}</p>
     </div>
   );
 }

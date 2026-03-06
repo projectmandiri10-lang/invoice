@@ -1,99 +1,106 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, FileDown, Printer } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import InvoicePreview from '@/components/InvoicePreview';
 import SuratJalanPreview from '@/components/SuratJalanPreview';
 import KwitansiPreview from '@/components/KwitansiPreview';
-import { Document, InvoiceData, SuratJalanData, KwitansiData } from '@/types/document';
-import { exportInvoiceToPDF, exportSuratJalanToPDF, exportKwitansiToPDF } from '@/lib/documentUtils';
+import { useAuth } from '@/contexts/AuthContext';
+import { useI18n } from '@/contexts/I18nContext';
+import { supabase } from '@/lib/supabase';
 import { consumePdfExportQuota } from '@/lib/pdfExportQuota';
-import { FileDown, Printer, ArrowLeft } from 'lucide-react';
+import { exportInvoiceToPDF, exportKwitansiToPDF, exportSuratJalanToPDF } from '@/lib/documentUtils';
+import { Document, InvoiceData, KwitansiData, SuratJalanData } from '@/types/document';
+
+const copy = {
+  en: {
+    loading: 'Loading document...',
+    notFound: 'Document not found',
+    loadFailed: 'Failed to load document',
+    exportLimit: 'Free PDF export limit reached (max. 5). Upgrade to Starter for unlimited exports.',
+    exportFailed: 'Failed to export PDF',
+    printFailed: 'Failed to print document',
+    back: 'Back',
+    export: 'Export PDF',
+    print: 'Print',
+  },
+  id: {
+    loading: 'Memuat dokumen...',
+    notFound: 'Dokumen tidak ditemukan',
+    loadFailed: 'Gagal memuat dokumen',
+    exportLimit: 'Batas export PDF untuk paket Free sudah tercapai (maks. 5x). Upgrade ke Starter untuk unlimited.',
+    exportFailed: 'Gagal export PDF',
+    printFailed: 'Gagal print dokumen',
+    back: 'Kembali',
+    export: 'Export PDF',
+    print: 'Cetak',
+  },
+} as const;
 
 export default function ViewDocumentPage() {
   const { id } = useParams<{ id: string }>();
   const { user, effectivePlan } = useAuth();
+  const { locale } = useI18n();
+  const text = copy[locale];
   const navigate = useNavigate();
   const [document, setDocument] = useState<Document | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const userTier = effectivePlan;
-
   useEffect(() => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
+    if (!id || !user) return;
+
+    const loadDocument = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('documents')
+          .select('*')
+          .eq('id', id)
+          .eq('user_id', user.id)
+          .single();
+
+        if (error) throw error;
+        setDocument(data);
+      } catch (error: any) {
+        console.error('Error loading document:', error);
+        alert(error?.code === 'PGRST116' ? text.notFound : text.loadFailed);
+        navigate('/my-documents');
+      } finally {
+        setLoading(false);
+      }
+    };
 
     loadDocument();
-  }, [id, user, navigate]);
-
-  const loadDocument = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('id', id)
-        .eq('user_id', user!.id)
-        .maybeSingle();
-
-      if (error) throw error;
-
-      if (!data) {
-        alert('Dokumen tidak ditemukan');
-        navigate('/my-documents');
-        return;
-      }
-
-      setDocument(data);
-    } catch (error) {
-      console.error('Error loading document:', error);
-      alert('Gagal memuat dokumen');
-      navigate('/my-documents');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [id, user, navigate, text.notFound, text.loadFailed]);
 
   const handleExport = async () => {
     if (!document) return;
 
     try {
-      const quota = await consumePdfExportQuota(user, userTier);
+      const quota = await consumePdfExportQuota(user, effectivePlan);
       if (!quota.allowed) {
-        alert('Batas export PDF untuk paket Free sudah tercapai (maks. 5x). Silakan upgrade ke Starter untuk unlimited.');
+        alert(text.exportLimit);
         return;
       }
 
-      switch (document.document_type) {
-        case 'invoice':
-          await exportInvoiceToPDF(document.content as InvoiceData, document.settings, userTier);
-          break;
-        case 'surat_jalan':
-          await exportSuratJalanToPDF(document.content as SuratJalanData, document.settings, userTier);
-          break;
-        case 'kwitansi':
-          await exportKwitansiToPDF(document.content as KwitansiData, document.settings, userTier);
-          break;
-        default:
-          throw new Error('Invalid document type');
+      if (document.document_type === 'invoice') {
+        await exportInvoiceToPDF(document.content as InvoiceData, document.settings, effectivePlan, locale);
+      } else if (document.document_type === 'surat_jalan') {
+        await exportSuratJalanToPDF(document.content as SuratJalanData, document.settings, effectivePlan, locale);
+      } else if (document.document_type === 'kwitansi') {
+        await exportKwitansiToPDF(document.content as KwitansiData, document.settings, effectivePlan, locale);
       }
     } catch (error) {
       console.error('Error exporting PDF:', error);
-      alert('Gagal export PDF');
+      alert(text.exportFailed);
     }
   };
 
   const handlePrint = () => {
-    if (!document) return;
-
     try {
       window.print();
     } catch (error) {
-      console.error('Error printing:', error);
-      alert('Gagal print dokumen');
+      console.error('Error printing document:', error);
+      alert(text.printFailed);
     }
   };
 
@@ -101,64 +108,56 @@ export default function ViewDocumentPage() {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="flex items-center justify-center h-screen">
-          <div className="text-xl text-gray-600">Memuat dokumen...</div>
+        <div className="flex h-screen items-center justify-center">
+          <div className="text-xl text-gray-600">{text.loading}</div>
         </div>
       </div>
     );
   }
 
-  if (!document) {
-    return null;
-  }
+  if (!document) return null;
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      <div className="max-w-5xl mx-auto px-4 py-8">
-        <div className="mb-6 flex items-center justify-between">
+      <div className="mx-auto max-w-7xl px-4 py-8">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <button
             onClick={() => navigate('/my-documents')}
-            className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
+            className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50"
           >
-            <ArrowLeft className="h-5 w-5" />
-            <span>Kembali ke Dokumen Saya</span>
+            <ArrowLeft className="h-4 w-4" />
+            <span>{text.back}</span>
           </button>
 
-          <div className="flex space-x-4">
+          <div className="flex gap-3">
             <button
               onClick={handleExport}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
             >
-              <FileDown className="h-5 w-5" />
-              <span>Export PDF</span>
+              <FileDown className="h-4 w-4" />
+              <span>{text.export}</span>
             </button>
             <button
               onClick={handlePrint}
-              className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+              className="flex items-center gap-2 rounded-lg bg-gray-800 px-4 py-2 text-white hover:bg-gray-900"
             >
-              <Printer className="h-5 w-5" />
-              <span>Print</span>
+              <Printer className="h-4 w-4" />
+              <span>{text.print}</span>
             </button>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-6">{document.title}</h1>
-
-          <div className="bg-gray-100 p-4 rounded">
-            {document.document_type === 'invoice' && (
-              <InvoicePreview data={document.content as InvoiceData} settings={document.settings as any} />
-            )}
-            {document.document_type === 'surat_jalan' && (
-              <SuratJalanPreview data={document.content as SuratJalanData} settings={document.settings as any} />
-            )}
-            {document.document_type === 'kwitansi' && (
-              <KwitansiPreview data={document.content as KwitansiData} settings={document.settings as any} />
-            )}
-          </div>
-        </div>
+        {document.document_type === 'invoice' && (
+          <InvoicePreview data={document.content as InvoiceData} settings={document.settings} />
+        )}
+        {document.document_type === 'surat_jalan' && (
+          <SuratJalanPreview data={document.content as SuratJalanData} settings={document.settings} />
+        )}
+        {document.document_type === 'kwitansi' && (
+          <KwitansiPreview data={document.content as KwitansiData} settings={document.settings} />
+        )}
       </div>
     </div>
   );
