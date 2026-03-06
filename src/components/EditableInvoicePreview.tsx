@@ -16,6 +16,7 @@ interface EditableInvoicePreviewProps {
   onSettingsChange?: (settings: DocumentSettings) => void;
   userTier: AppPlan;
   userId?: string;
+  onRequestUpgradeStarter?: () => void;
 }
 
 const copy = {
@@ -117,7 +118,15 @@ const copy = {
   },
 } as const;
 
-export default function EditableInvoicePreview({ data, settings, onChange, onSettingsChange, userTier, userId }: EditableInvoicePreviewProps) {
+export default function EditableInvoicePreview({
+  data,
+  settings,
+  onChange,
+  onSettingsChange,
+  userTier,
+  userId,
+  onRequestUpgradeStarter,
+}: EditableInvoicePreviewProps) {
   const { locale } = useI18n();
   const text = copy[locale];
   const primaryColor = settings?.colorScheme.primary || '#2563eb';
@@ -288,6 +297,7 @@ export default function EditableInvoicePreview({ data, settings, onChange, onSet
             logoUrl={settings?.logoUrl} 
             onLogoChange={handleLogoChange}
             userTier={userTier}
+            onRequestUpgradeStarter={onRequestUpgradeStarter}
           />
         </div>
         <div className="w-2/3 text-right">

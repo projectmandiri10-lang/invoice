@@ -13,6 +13,7 @@ interface EditableSuratJalanPreviewProps {
   onChange: (data: SuratJalanData) => void;
   onSettingsChange?: (settings: DocumentSettings) => void;
   userTier: AppPlan;
+  onRequestUpgradeStarter?: () => void;
 }
 
 const copy = {
@@ -74,6 +75,7 @@ export default function EditableSuratJalanPreview({
   onChange,
   onSettingsChange,
   userTier,
+  onRequestUpgradeStarter,
 }: EditableSuratJalanPreviewProps) {
   const { locale } = useI18n();
   const text = copy[locale];
@@ -122,7 +124,12 @@ export default function EditableSuratJalanPreview({
     >
       <div className="mb-6 flex items-start justify-between">
         <div className="w-1/3">
-          <LogoUpload logoUrl={settings?.logoUrl} onLogoChange={handleLogoChange} userTier={userTier} />
+          <LogoUpload
+            logoUrl={settings?.logoUrl}
+            onLogoChange={handleLogoChange}
+            userTier={userTier}
+            onRequestUpgradeStarter={onRequestUpgradeStarter}
+          />
         </div>
         <div className="flex-1 text-center">
           <h1 className="text-3xl font-bold text-gray-900" style={{ color: primaryColor }}>

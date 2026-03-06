@@ -254,28 +254,40 @@ ALTER TABLE IF EXISTS public.clients
 DO $$
 BEGIN
   IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name = 'clients' AND column_name = 'portal_access_token'
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'clients'
   ) THEN
-    EXECUTE $q$
-      UPDATE public.clients
-      SET portal_token = COALESCE(portal_token, portal_access_token, gen_random_uuid())
-      WHERE portal_token IS NULL
-    $q$;
-  ELSE
-    EXECUTE $q$
-      UPDATE public.clients
-      SET portal_token = COALESCE(portal_token, gen_random_uuid())
-      WHERE portal_token IS NULL
-    $q$;
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'clients' AND column_name = 'portal_access_token'
+    ) THEN
+      EXECUTE $q$
+        UPDATE public.clients
+        SET portal_token = COALESCE(portal_token, portal_access_token, gen_random_uuid())
+        WHERE portal_token IS NULL
+      $q$;
+    ELSE
+      EXECUTE $q$
+        UPDATE public.clients
+        SET portal_token = COALESCE(portal_token, gen_random_uuid())
+        WHERE portal_token IS NULL
+      $q$;
+    END IF;
   END IF;
 END $$;
 
-ALTER TABLE public.clients
+ALTER TABLE IF EXISTS public.clients
   ALTER COLUMN portal_token SET DEFAULT gen_random_uuid();
 
-ALTER TABLE public.clients
+ALTER TABLE IF EXISTS public.clients
   ALTER COLUMN portal_token SET NOT NULL;
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_clients_portal_token_unique ON public.clients(portal_token);
-
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'clients'
+  ) THEN
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_clients_portal_token_unique ON public.clients(portal_token);
+  END IF;
+END $$;

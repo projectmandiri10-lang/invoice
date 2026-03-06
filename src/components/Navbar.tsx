@@ -17,6 +17,8 @@ const copy = {
     signIn: 'Sign in',
     register: 'Register',
     language: 'Language',
+    upgradeStarter: 'Upgrade to Starter',
+    upgradePro: 'Upgrade to Pro',
   },
   id: {
     brand: 'idCashier Invoice Generator',
@@ -29,6 +31,8 @@ const copy = {
     signIn: 'Masuk',
     register: 'Daftar',
     language: 'Bahasa',
+    upgradeStarter: 'Upgrade ke Starter',
+    upgradePro: 'Upgrade ke Pro',
   },
 } as const;
 
@@ -43,6 +47,8 @@ export default function Navbar() {
     { to: '/clients', label: text.clients, icon: Users },
     { to: '/billing', label: text.billing, icon: CreditCard },
   ];
+  const upgradeTarget = effectivePlan === 'starter' ? 'pro_month' : 'starter_month';
+  const upgradeLabel = effectivePlan === 'starter' ? text.upgradePro : text.upgradeStarter;
 
   const getNavLinkClassName = ({ isActive }: { isActive: boolean }) =>
     `inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
@@ -105,6 +111,15 @@ export default function Navbar() {
 
             {user ? (
               <>
+                {effectivePlan !== 'pro' && (
+                  <Link
+                    to="/billing"
+                    state={{ planCode: upgradeTarget }}
+                    className="inline-flex h-10 items-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+                  >
+                    {upgradeLabel}
+                  </Link>
+                )}
                 <Link
                   to="/account"
                   className="inline-flex h-10 items-center gap-2 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 hover:text-blue-600"

@@ -12,6 +12,7 @@ interface EditableKwitansiPreviewProps {
   onChange: (data: KwitansiData) => void;
   onSettingsChange?: (settings: DocumentSettings) => void;
   userTier: AppPlan;
+  onRequestUpgradeStarter?: () => void;
 }
 
 const copy = {
@@ -57,6 +58,7 @@ export default function EditableKwitansiPreview({
   onChange,
   onSettingsChange,
   userTier,
+  onRequestUpgradeStarter,
 }: EditableKwitansiPreviewProps) {
   const { locale } = useI18n();
   const text = copy[locale];
@@ -90,7 +92,12 @@ export default function EditableKwitansiPreview({
       <div className="p-8">
         <div className="mb-6 flex items-start justify-between">
           <div className="w-1/3">
-            <LogoUpload logoUrl={settings?.logoUrl} onLogoChange={handleLogoChange} userTier={userTier} />
+            <LogoUpload
+              logoUrl={settings?.logoUrl}
+              onLogoChange={handleLogoChange}
+              userTier={userTier}
+              onRequestUpgradeStarter={onRequestUpgradeStarter}
+            />
           </div>
           <div className="flex-1 text-center">
             <h1 className="text-4xl font-bold text-gray-900" style={{ color: primaryColor }}>

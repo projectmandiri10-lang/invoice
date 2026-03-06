@@ -209,6 +209,12 @@ export default function HomePage() {
   );
   const starterMonthlyPrice = `${formatCurrency(100000, false, locale)}${locale === 'id' ? '/bulan' : '/month'}`;
   const proMonthlyPrice = `${formatCurrency(150000, false, locale)}${locale === 'id' ? '/bulan' : '/month'}`;
+  const openStarterUpgrade = useCallback(() => {
+    navigate(user ? '/billing' : '/register', user ? { state: { planCode: 'starter_month' } } : undefined);
+  }, [navigate, user]);
+  const openProUpgrade = useCallback(() => {
+    navigate(user ? '/billing' : '/register', user ? { state: { planCode: 'pro_month' } } : undefined);
+  }, [navigate, user]);
 
   useEffect(() => {
     const docToLoad = location.state?.documentToLoad;
@@ -882,6 +888,7 @@ export default function HomePage() {
                       onSettingsChange={setSettings}
                       userTier={userTier}
                       userId={user?.id}
+                      onRequestUpgradeStarter={openStarterUpgrade}
                     />
                   )}
                   {activeTab === 'surat_jalan' && suratJalanData && (
@@ -891,6 +898,7 @@ export default function HomePage() {
                       settings={settings} 
                       onSettingsChange={setSettings}
                       userTier={userTier}
+                      onRequestUpgradeStarter={openStarterUpgrade}
                     />
                   )}
                   {activeTab === 'kwitansi' && kwitansiData && (
@@ -900,6 +908,7 @@ export default function HomePage() {
                       settings={settings} 
                       onSettingsChange={setSettings}
                       userTier={userTier}
+                      onRequestUpgradeStarter={openStarterUpgrade}
                     />
                   )}
                   </Suspense>
@@ -929,14 +938,9 @@ export default function HomePage() {
                   settings={settings}
                   onChange={setSettings}
                   effectivePlan={userTier}
+                  onRequestUpgradeStarter={openStarterUpgrade}
                   onRequestUpgradePro={() => {
-                    toast.info(text.proFeature, {
-                      description: text.proFeatureDescription,
-                      action: {
-                        label: text.upgrade,
-                        onClick: () => navigate('/billing', { state: { planCode: 'pro_month' } }),
-                      },
-                    });
+                    openProUpgrade();
                   }}
                 />
               </div>

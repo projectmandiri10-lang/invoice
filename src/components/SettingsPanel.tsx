@@ -40,6 +40,7 @@ interface SettingsPanelProps {
   settings: DocumentSettings;
   onChange: (settings: DocumentSettings) => void;
   effectivePlan?: AppPlan;
+  onRequestUpgradeStarter?: () => void;
   onRequestUpgradePro?: () => void;
 }
 
@@ -108,6 +109,12 @@ const copy = {
     notes: 'Notes',
     paymentInfo: 'Payment info',
     paymentGateway: 'Pay button',
+    upgradeStarterTitle: 'Unlock branding',
+    upgradeStarterDescription: 'Remove ads and watermark, then upload your own company logo with the Starter plan.',
+    upgradeStarterButton: 'Upgrade to Starter',
+    upgradeProTitle: 'Enable online invoice payments',
+    upgradeProDescription: 'Client portal and invoice payment buttons are available on the Pro plan.',
+    upgradeProButton: 'Upgrade to Pro',
   },
   id: {
     title: 'Pengaturan',
@@ -142,6 +149,12 @@ const copy = {
     notes: 'Catatan',
     paymentInfo: 'Info pembayaran',
     paymentGateway: 'Tombol bayar',
+    upgradeStarterTitle: 'Buka fitur branding',
+    upgradeStarterDescription: 'Hilangkan iklan dan watermark, lalu unggah logo perusahaan Anda dengan paket Starter.',
+    upgradeStarterButton: 'Upgrade ke Starter',
+    upgradeProTitle: 'Aktifkan pembayaran invoice online',
+    upgradeProDescription: 'Client portal dan tombol bayar invoice tersedia di paket Pro.',
+    upgradeProButton: 'Upgrade ke Pro',
   },
 } as const;
 
@@ -150,6 +163,7 @@ export default function SettingsPanel({
   settings,
   onChange,
   effectivePlan = 'free',
+  onRequestUpgradeStarter,
   onRequestUpgradePro,
 }: SettingsPanelProps) {
   const { locale } = useI18n();
@@ -372,6 +386,20 @@ export default function SettingsPanel({
             </div>
           </div>
 
+          {effectivePlan === 'free' && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+              <p className="font-semibold text-amber-900">{text.upgradeStarterTitle}</p>
+              <p className="mt-1 text-sm text-amber-800">{text.upgradeStarterDescription}</p>
+              <button
+                type="button"
+                onClick={onRequestUpgradeStarter}
+                className="mt-3 inline-flex items-center rounded-lg bg-amber-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-amber-700"
+              >
+                {text.upgradeStarterButton}
+              </button>
+            </div>
+          )}
+
           <hr className="my-6" />
 
           <div className="space-y-4">
@@ -468,6 +496,20 @@ export default function SettingsPanel({
               </button>
             </div>
           </div>
+
+          {documentType === 'invoice' && effectivePlan !== 'pro' && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+              <p className="font-semibold text-blue-900">{text.upgradeProTitle}</p>
+              <p className="mt-1 text-sm text-blue-800">{text.upgradeProDescription}</p>
+              <button
+                type="button"
+                onClick={onRequestUpgradePro}
+                className="mt-3 inline-flex items-center rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+              >
+                {text.upgradeProButton}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
