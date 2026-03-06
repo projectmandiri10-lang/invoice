@@ -1,0 +1,35 @@
+// ... (impor dan kode lainnya tetap sama)
+
+import { Document, InvoiceData, SuratJalanData, KwitansiData } from '@/types/document';
+// Hapus impor html2canvas dan jspdf jika ada
+import { exportToPDF, printDocument } from '@/lib/documentUtils';
+import { FileDown, Printer, ArrowLeft } from 'lucide-react';
+
+export default function ViewDocumentPage() {
+  // ... (state dan useEffect tetap sama)
+
+  const handleExport = () => {
+    if (!document) return;
+    try {
+      // Panggil exportToPDF dengan seluruh objek dokumen
+      exportToPDF(document);
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      alert('Gagal mengekspor PDF');
+    }
+  };
+
+  const handlePrint = () => {
+    if (!document) return;
+    // Tentukan ID elemen pratinjau berdasarkan jenis dokumen
+    const elementId = `${document.document_type}-preview`;
+    try {
+      printDocument(elementId);
+    } catch (error) {
+      console.error('Error printing:', error);
+      alert('Gagal mencetak dokumen');
+    }
+  };
+  
+  // ... (sisa kode JSX tetap sama)
+}
