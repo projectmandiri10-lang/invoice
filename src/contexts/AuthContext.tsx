@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { isDeveloperAccountEmail } from '@/lib/developerAccounts';
 
 export type AppPlan = 'free' | 'starter' | 'pro';
 
@@ -40,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const getEffectivePlan = (profileRow: UserProfile | null, currentUser: User | null): AppPlan => {
-    void currentUser;
+    if (isDeveloperAccountEmail(currentUser?.email)) return 'pro';
     if (!profileRow) return 'free';
 
     const expiresAt = profileRow.plan_expires_at ? new Date(profileRow.plan_expires_at) : null;

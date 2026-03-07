@@ -66,7 +66,9 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (ownerProfileError) throw ownerProfileError;
-    const effectivePlan = ownerProfile ? getEffectivePlan(ownerProfile) : 'free';
+    const { data: ownerUserData, error: ownerUserError } = await supabaseAdmin.auth.admin.getUserById(document.user_id);
+    if (ownerUserError) throw ownerUserError;
+    const effectivePlan = getEffectivePlan(ownerProfile || {}, ownerUserData.user?.email);
     if (effectivePlan !== 'pro') {
       return errorResponse('Invoice payment requires Pro plan', 403, 'PRO_REQUIRED');
     }
@@ -89,4 +91,3 @@ Deno.serve(async (req) => {
     return errorResponse('Internal error', 500, 'INTERNAL_ERROR', { message: err?.message || String(err) });
   }
 });
-

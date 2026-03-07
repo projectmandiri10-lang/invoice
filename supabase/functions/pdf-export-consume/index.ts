@@ -102,9 +102,11 @@ Deno.serve(async (req) => {
     const supabaseAdmin = getSupabaseAdmin();
 
     let userId: string | null = null;
+    let userEmail: string | null = null;
     try {
       const user = await requireUser(req);
       userId = user.id;
+      userEmail = user.email ?? null;
     } catch (err: any) {
       if (err?.message !== 'UNAUTHORIZED') throw err;
     }
@@ -118,7 +120,7 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (profileError) throw profileError;
-      const effectivePlan = profileRow ? getEffectivePlan(profileRow) : 'free';
+      const effectivePlan = getEffectivePlan(profileRow, userEmail);
       if (effectivePlan !== 'free') {
         return jsonResponse({ allowed: true, used: null, limit: null, remaining: null, scope: 'paid' } satisfies ConsumeResponse);
       }
