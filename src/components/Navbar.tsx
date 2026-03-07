@@ -17,6 +17,7 @@ const copy = {
     signIn: 'Sign in',
     register: 'Register',
     language: 'Language',
+    upgradeButton: 'Upgrade',
     upgradeStarter: 'Upgrade to Starter',
     upgradePro: 'Upgrade to Pro',
   },
@@ -31,6 +32,7 @@ const copy = {
     signIn: 'Masuk',
     register: 'Daftar',
     language: 'Bahasa',
+    upgradeButton: 'Upgrade',
     upgradeStarter: 'Upgrade ke Starter',
     upgradePro: 'Upgrade ke Pro',
   },
@@ -115,9 +117,12 @@ export default function Navbar() {
                   <Link
                     to="/billing"
                     state={{ planCode: upgradeTarget }}
-                    className="inline-flex h-10 items-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+                    title={upgradeLabel}
+                    aria-label={upgradeLabel}
+                    className="inline-flex h-10 items-center gap-2 rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
                   >
-                    {upgradeLabel}
+                    <CreditCard className="h-4 w-4" />
+                    <span className="hidden sm:inline">{text.upgradeButton}</span>
                   </Link>
                 )}
                 <Link
