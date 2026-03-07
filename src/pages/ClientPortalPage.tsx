@@ -6,6 +6,11 @@ import { useI18n } from '@/contexts/I18nContext';
 import { InvoiceData } from '@/types/document';
 import { exportInvoiceToPDF, formatCurrency, formatDate } from '@/lib/documentUtils';
 import { invokeEdgeFunction } from '@/lib/edgeFunctions';
+import {
+  getDuitkuPaymentCategory,
+  getDuitkuPaymentCategoryLabel,
+  sortDuitkuPaymentMethods,
+} from '@/lib/duitkuPaymentMethods';
 
 interface DocumentRow {
   id: string;
@@ -82,6 +87,7 @@ const copy = {
     methodsFailed: 'Failed to load payment methods',
     createFailed: 'Failed to create transaction',
     downloadFailed: 'Failed to download PDF.',
+    channelHint: 'Payment methods shown here come directly from the active channels in the merchant Duitku project.',
   },
   id: {
     loading: 'Memuat portal klien...',
@@ -116,6 +122,7 @@ const copy = {
     methodsFailed: 'Gagal memuat metode pembayaran',
     createFailed: 'Gagal membuat transaksi',
     downloadFailed: 'Gagal mengunduh PDF.',
+    channelHint: 'Metode pembayaran di sini langsung mengikuti channel yang aktif di project merchant Duitku.',
   },
 } as const;
 
@@ -230,7 +237,7 @@ export default function ClientPortalPage() {
         documentId: doc.id,
       });
 
-      setPaymentMethods(res.methods || []);
+      setPaymentMethods(sortDuitkuPaymentMethods(res.methods || []));
     } catch (err: any) {
       toast.error(text.methodsFailed, { description: err?.message || String(err) });
       setSelectedDocument(null);
@@ -365,9 +372,11 @@ export default function ClientPortalPage() {
                 <p className="text-sm text-gray-600">{text.noMethods}</p>
               ) : (
                 <div className="space-y-2">
+                  <p className="text-xs text-gray-500">{text.channelHint}</p>
                   {paymentMethods.map((method) => {
                     const feeNum = Number(method.totalFee || 0);
                     const checked = selectedPaymentMethod === method.paymentMethod;
+                    const category = getDuitkuPaymentCategory(method);
                     return (
                       <button
                         key={method.paymentMethod}
@@ -385,6 +394,11 @@ export default function ClientPortalPage() {
                           )}
                           <div>
                             <div className="font-medium text-gray-900">{method.paymentName}</div>
+                            <div className="mt-1 flex items-center gap-2">
+                              <span className="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-600">
+                                {getDuitkuPaymentCategoryLabel(category, locale)}
+                              </span>
+                            </div>
                             {Number.isFinite(feeNum) && feeNum > 0 && (
                               <div className="text-xs text-gray-500">
                                 {text.fee}: {formatCurrency(feeNum, false, locale)}

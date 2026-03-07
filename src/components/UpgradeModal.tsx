@@ -4,6 +4,11 @@ import { toast } from 'sonner';
 import { invokeEdgeFunction } from '@/lib/edgeFunctions';
 import { useI18n } from '@/contexts/I18nContext';
 import { formatCurrency, getBillingPlanLabel, type BillingPlanCode } from '@/lib/i18n';
+import {
+  getDuitkuPaymentCategory,
+  getDuitkuPaymentCategoryLabel,
+  sortDuitkuPaymentMethods,
+} from '@/lib/duitkuPaymentMethods';
 
 type PaymentMethod = {
   paymentMethod: string;
@@ -40,6 +45,8 @@ const copy = {
     loadFailed: 'Failed to load payment methods',
     createFailed: 'Failed to create transaction',
     fee: 'Fee',
+    channelHint: 'The list below comes directly from the active payment channels in your Duitku project.',
+    missingPopularChannels: 'QRIS, OVO, ShopeePay, DANA, and other methods will appear automatically after they are activated in Duitku.',
   },
   id: {
     title: 'Upgrade / Perpanjang',
@@ -55,6 +62,8 @@ const copy = {
     loadFailed: 'Gagal memuat metode pembayaran',
     createFailed: 'Gagal membuat transaksi',
     fee: 'Biaya',
+    channelHint: 'Daftar di bawah ini langsung mengikuti channel pembayaran yang aktif di project Duitku Anda.',
+    missingPopularChannels: 'QRIS, OVO, ShopeePay, DANA, dan metode lain akan muncul otomatis setelah diaktifkan di Duitku.',
   },
 } as const;
 
@@ -93,7 +102,7 @@ export default function UpgradeModal({
         const res = await invokeEdgeFunction<PaymentMethodsResponse>('billing-payment-methods', { planCode });
         if (cancelled) return;
         setAmountIdr(res.amountIdr);
-        setMethods(res.methods || []);
+        setMethods(sortDuitkuPaymentMethods(res.methods || []));
       } catch (err: any) {
         if (cancelled) return;
         toast.error(text.loadFailed, { description: err?.message || String(err) });
@@ -166,6 +175,9 @@ export default function UpgradeModal({
 
           <div>
             <label className="mb-2 block text-sm font-semibold text-gray-700">{text.paymentMethod}</label>
+            <p className="mb-3 text-xs text-gray-500">
+              {text.channelHint} {text.missingPopularChannels}
+            </p>
             {loadingMethods ? (
               <div className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-3 text-sm text-gray-600">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -180,6 +192,7 @@ export default function UpgradeModal({
                 {methods.map((method) => {
                   const fee = Number(method.totalFee || 0);
                   const checked = paymentMethod === method.paymentMethod;
+                  const category = getDuitkuPaymentCategory(method);
 
                   return (
                     <button
@@ -200,6 +213,11 @@ export default function UpgradeModal({
                         )}
                         <div>
                           <div className="font-medium text-gray-900">{method.paymentName}</div>
+                          <div className="mt-1 flex items-center gap-2">
+                            <span className="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-600">
+                              {getDuitkuPaymentCategoryLabel(category, locale)}
+                            </span>
+                          </div>
                           {Number.isFinite(fee) && fee > 0 && (
                             <div className="text-xs text-gray-500">
                               {text.fee}: {formatCurrency(fee, false, locale)}
