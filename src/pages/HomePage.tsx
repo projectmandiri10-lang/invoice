@@ -19,11 +19,11 @@ import { consumePdfExportQuota } from '@/lib/pdfExportQuota';
 import {
   CLIENT_LIMITS,
   DOCUMENT_LIMITS,
-  formatCurrency,
   getDocumentTypeLabel,
   getLocaleTag,
   type Locale,
 } from '@/lib/i18n';
+import { contactAdministrator } from '@/lib/authz';
 import { FileDown, Save, FileText, Truck, Receipt, Check, AlertCircle, WifiOff, Repeat } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 import HilltopAds from '@/components/HilltopAds';
@@ -43,15 +43,15 @@ const copy = {
     templateFallback:
       'Using local templates. Check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env.local.',
     documentLimitFreeTitle: 'Free document limit reached',
-    documentLimitFreeDescription: 'Upgrade to Starter for up to 100 saved documents.',
+    documentLimitFreeDescription: 'Contact the administrator to assign the Starter plan.',
     documentLimitStarterTitle: 'Starter document limit reached',
-    documentLimitStarterDescription: 'Upgrade to Pro for unlimited saved documents.',
+    documentLimitStarterDescription: 'Contact the administrator to assign the Pro plan.',
     clientCheckFailed: 'Failed to check client data.',
     clientCountFailed: 'Failed to check client count.',
     clientLimitStarterTitle: 'Starter client limit reached',
-    clientLimitStarterDescription: 'Upgrade to Pro for unlimited clients and client management.',
+    clientLimitStarterDescription: 'Contact the administrator to assign the Pro plan.',
     clientLimitFreeTitle: 'Free client limit reached',
-    clientLimitFreeDescription: 'Upgrade to Starter for up to 25 clients.',
+    clientLimitFreeDescription: 'Contact the administrator to assign the Starter plan.',
     loginRequired: 'Sign in required',
     loginRequiredDescription: 'You must sign in to save documents.',
     saveUpdated: 'Document updated successfully.',
@@ -64,8 +64,8 @@ const copy = {
     autosaveFailed: 'Auto-save failed',
     saveFailed: 'Failed to save document',
     exportLimitTitle: 'PDF export limit reached',
-    exportLimitAnonymous: 'You can export PDF up to 5 times without an account. Sign in and upgrade to Starter for unlimited exports.',
-    exportLimitFree: 'Free plan can export PDF up to 5 times. Upgrade to Starter for unlimited exports.',
+    exportLimitAnonymous: 'You can export PDF up to 5 times without an account. Sign in first if you want the administrator to activate a paid plan for you.',
+    exportLimitFree: 'Free plan can export PDF up to 5 times. Contact the administrator to assign the Starter plan.',
     exportFailed: 'Failed to export PDF',
     sampleLoaded: 'Sample data loaded successfully.',
     heading: 'idCashier Invoice Generator',
@@ -81,8 +81,8 @@ const copy = {
     saveBannerTextAction: 'register',
     saveBannerTextEnd: 'to save your work and access it later.',
     proFeature: 'Pro feature',
-    proFeatureDescription: 'Invoice payment button is available on the Pro plan.',
-    upgrade: 'Upgrade',
+    proFeatureDescription: 'Client portal access is available on the Pro plan.',
+    contactAdmin: 'Contact admin',
     login: 'Sign in',
     exportPdf: 'Export PDF',
     saveDocument: 'Save Document',
@@ -97,15 +97,15 @@ const copy = {
     templateFallback:
       'Menggunakan template lokal. Periksa VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY di .env.local.',
     documentLimitFreeTitle: 'Batas dokumen Free tercapai',
-    documentLimitFreeDescription: 'Upgrade ke Starter untuk hingga 100 dokumen tersimpan.',
+    documentLimitFreeDescription: 'Hubungi administrator untuk mengaktifkan paket Starter.',
     documentLimitStarterTitle: 'Batas dokumen Starter tercapai',
-    documentLimitStarterDescription: 'Upgrade ke Pro untuk dokumen tersimpan tanpa batas.',
+    documentLimitStarterDescription: 'Hubungi administrator untuk mengaktifkan paket Pro.',
     clientCheckFailed: 'Gagal memeriksa data klien.',
     clientCountFailed: 'Gagal memeriksa jumlah klien.',
     clientLimitStarterTitle: 'Batas klien Starter tercapai',
-    clientLimitStarterDescription: 'Upgrade ke Pro untuk klien tanpa batas dan manajemen klien.',
+    clientLimitStarterDescription: 'Hubungi administrator untuk mengaktifkan paket Pro.',
     clientLimitFreeTitle: 'Batas klien Free tercapai',
-    clientLimitFreeDescription: 'Upgrade ke Starter untuk hingga 25 klien.',
+    clientLimitFreeDescription: 'Hubungi administrator untuk mengaktifkan paket Starter.',
     loginRequired: 'Login diperlukan',
     loginRequiredDescription: 'Anda harus login untuk menyimpan dokumen.',
     saveUpdated: 'Dokumen berhasil diperbarui.',
@@ -118,8 +118,8 @@ const copy = {
     autosaveFailed: 'Gagal menyimpan otomatis',
     saveFailed: 'Gagal menyimpan dokumen',
     exportLimitTitle: 'Batas export PDF tercapai',
-    exportLimitAnonymous: 'Maksimal 5 kali export PDF untuk pengguna tanpa akun. Silakan login dan upgrade ke Starter untuk unlimited.',
-    exportLimitFree: 'Paket Free maksimal 5 kali export PDF. Upgrade ke Starter untuk unlimited.',
+    exportLimitAnonymous: 'Maksimal 5 kali export PDF untuk pengguna tanpa akun. Silakan login terlebih dahulu jika ingin meminta aktivasi paket berbayar ke administrator.',
+    exportLimitFree: 'Paket Free maksimal 5 kali export PDF. Hubungi administrator untuk mengaktifkan paket Starter.',
     exportFailed: 'Gagal export PDF',
     sampleLoaded: 'Contoh data berhasil dimuat.',
     heading: 'idCashier Invoice Generator',
@@ -135,8 +135,8 @@ const copy = {
     saveBannerTextAction: 'daftar',
     saveBannerTextEnd: 'untuk menyimpan pekerjaan Anda dan mengaksesnya nanti.',
     proFeature: 'Fitur Pro',
-    proFeatureDescription: 'Tombol bayar invoice tersedia di paket Pro.',
-    upgrade: 'Upgrade',
+    proFeatureDescription: 'Akses portal klien tersedia di paket Pro.',
+    contactAdmin: 'Hubungi admin',
     login: 'Masuk',
     exportPdf: 'Export PDF',
     saveDocument: 'Simpan Dokumen',
@@ -146,7 +146,7 @@ const copy = {
 } as const;
 
 export default function HomePage() {
-  const { user, effectivePlan } = useAuth();
+  const { user, effectivePlan, isSuperuser } = useAuth();
   const { locale } = useI18n();
   const text = copy[locale];
   const localeTag = getLocaleTag(locale);
@@ -194,6 +194,25 @@ export default function HomePage() {
   };
 
   const userTier = effectivePlan;
+  const requestPlanAssignment = useCallback(
+    (plan: 'starter' | 'pro') => {
+      if (isSuperuser) {
+        navigate('/admin/users');
+        return;
+      }
+
+      const subject =
+        locale === 'id'
+          ? `Permintaan aktivasi paket ${plan === 'starter' ? 'Starter' : 'Pro'}`
+          : `Request to activate ${plan === 'starter' ? 'Starter' : 'Pro'} plan`;
+      const body =
+        locale === 'id'
+          ? `Halo Admin,%0D%0A%0D%0ASaya ingin mengaktifkan paket ${plan === 'starter' ? 'Starter' : 'Pro'} untuk akun ${user?.email || '-'}.%0D%0A`
+          : `Hello Admin,%0D%0A%0D%0AI would like to activate the ${plan === 'starter' ? 'Starter' : 'Pro'} plan for account ${user?.email || '-'}.%0D%0A`;
+      contactAdministrator(subject, body);
+    },
+    [isSuperuser, locale, navigate, user?.email]
+  );
 
   const getDocumentTitle = useCallback(
     (documentType: DocumentType, content: InvoiceData | SuratJalanData | KwitansiData) => {
@@ -207,14 +226,12 @@ export default function HomePage() {
     },
     [locale]
   );
-  const starterMonthlyPrice = `${formatCurrency(100000, false, locale)}${locale === 'id' ? '/bulan' : '/month'}`;
-  const proMonthlyPrice = `${formatCurrency(150000, false, locale)}${locale === 'id' ? '/bulan' : '/month'}`;
   const openStarterUpgrade = useCallback(() => {
-    navigate(user ? '/billing' : '/register', user ? { state: { planCode: 'starter_month' } } : undefined);
-  }, [navigate, user]);
+    requestPlanAssignment('starter');
+  }, [requestPlanAssignment]);
   const openProUpgrade = useCallback(() => {
-    navigate(user ? '/billing' : '/register', user ? { state: { planCode: 'pro_month' } } : undefined);
-  }, [navigate, user]);
+    requestPlanAssignment('pro');
+  }, [requestPlanAssignment]);
 
   useEffect(() => {
     const docToLoad = location.state?.documentToLoad;
@@ -479,15 +496,13 @@ export default function HomePage() {
       return false;
     }
 
-    if (count !== null && count >= limit) {
+      if (count !== null && count >= limit) {
       const isStarter = userTier === 'starter';
       toast.error(isStarter ? text.documentLimitStarterTitle : text.documentLimitFreeTitle, {
-        description: isStarter
-          ? `${text.documentLimitStarterDescription} (${proMonthlyPrice})`
-          : `${text.documentLimitFreeDescription} (${starterMonthlyPrice})`,
+        description: isStarter ? text.documentLimitStarterDescription : text.documentLimitFreeDescription,
         action: {
-          label: text.upgrade,
-          onClick: () => navigate('/billing', { state: { planCode: isStarter ? 'pro_month' : 'starter_month' } }),
+          label: text.contactAdmin,
+          onClick: () => requestPlanAssignment(isStarter ? 'pro' : 'starter'),
         },
       });
       return false;
@@ -538,18 +553,18 @@ export default function HomePage() {
     if (count !== null && count >= limit) {
       if (userTier === 'starter') {
         toast.error(text.clientLimitStarterTitle, {
-          description: `${text.clientLimitStarterDescription} (${proMonthlyPrice})`,
+          description: text.clientLimitStarterDescription,
           action: {
-            label: text.upgrade,
-            onClick: () => navigate('/billing', { state: { planCode: 'pro_month' } }),
+            label: text.contactAdmin,
+            onClick: () => requestPlanAssignment('pro'),
           },
         });
       } else {
         toast.error(text.clientLimitFreeTitle, {
-          description: `${text.clientLimitFreeDescription} (${starterMonthlyPrice})`,
+          description: text.clientLimitFreeDescription,
           action: {
-            label: text.upgrade,
-            onClick: () => navigate('/billing', { state: { planCode: 'starter_month' } }),
+            label: text.contactAdmin,
+            onClick: () => requestPlanAssignment('starter'),
           },
         });
       }
@@ -714,8 +729,8 @@ export default function HomePage() {
                 onClick: () => navigate('/login'),
               }
             : {
-                label: text.upgrade,
-                onClick: () => navigate('/billing', { state: { planCode: 'starter_month' } }),
+                label: text.contactAdmin,
+                onClick: () => requestPlanAssignment('starter'),
               },
         });
         return;

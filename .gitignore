@@ -21,6 +21,8 @@ email.txt
 !.vscode/extensions.json
 .idea
 .DS_Store
+desktop.ini
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj

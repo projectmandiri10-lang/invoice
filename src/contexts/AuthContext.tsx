@@ -1,75 +1,102 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import { isDeveloperAccountEmail } from '@/lib/developerAccounts';
+import {
+  normalizeAccountStatus,
+  persistAuthNotice,
+  type AccountStatus,
+  isSuperuserEmail,
+} from '@/lib/authz';
 
 export type AppPlan = 'free' | 'starter' | 'pro';
 
 export interface UserProfile {
   plan: AppPlan;
-  plan_expires_at: string | null;
+  account_status: AccountStatus;
 }
 
 interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
   effectivePlan: AppPlan;
+  accountStatus: AccountStatus;
+  isSuperuser: boolean;
   isEmailVerified: boolean;
   loading: boolean;
   refresh: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
   resendVerificationEmail: (email: string) => Promise<void>;
-  sendPasswordResetEmail: (email: string) => Promise<void>;
-  updatePassword: (password: string) => Promise<void>;
-  updateEmail: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-function buildAuthRedirectUrl(flow: 'signup' | 'recovery' | 'email-change') {
+function buildSignupRedirectUrl() {
   const url = new URL('/auth/callback', window.location.origin);
-  url.searchParams.set('flow', flow);
+  url.searchParams.set('flow', 'signup');
   return url.toString();
+}
+
+function getEffectivePlan(profileRow: UserProfile | null, currentUser: User | null): AppPlan {
+  if (isSuperuserEmail(currentUser?.email)) return 'pro';
+  if (!profileRow) return 'free';
+  return profileRow.plan;
+}
+
+function getAccountStatus(profileRow: UserProfile | null, currentUser: User | null): AccountStatus {
+  if (isSuperuserEmail(currentUser?.email)) return 'active';
+  return normalizeAccountStatus(profileRow?.account_status);
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-
-  const getEffectivePlan = (profileRow: UserProfile | null, currentUser: User | null): AppPlan => {
-    if (isDeveloperAccountEmail(currentUser?.email)) return 'pro';
-    if (!profileRow) return 'free';
-
-    const expiresAt = profileRow.plan_expires_at ? new Date(profileRow.plan_expires_at) : null;
-    if (!expiresAt || Number.isNaN(expiresAt.getTime())) return 'free';
-    if (expiresAt.getTime() <= Date.now()) return 'free';
-
-    return profileRow.plan;
-  };
-
   const effectivePlan = useMemo(() => getEffectivePlan(profile, user), [profile, user]);
+  const accountStatus = useMemo(() => getAccountStatus(profile, user), [profile, user]);
+  const isSuperuser = useMemo(() => isSuperuserEmail(user?.email), [user]);
   const isEmailVerified = Boolean(user?.email_confirmed_at);
 
+  async function fetchProfile(currentUser: User | null): Promise<UserProfile | null> {
+    if (!currentUser) return null;
+
+    const { data } = await supabase
+      .from('profiles')
+      .select('plan, account_status')
+      .eq('id', currentUser.id)
+      .maybeSingle();
+
+    return (data as UserProfile) || null;
+  }
+
+  async function syncSession(currentUser: User | null) {
+    if (!currentUser) {
+      setUser(null);
+      setProfile(null);
+      return;
+    }
+
+    const profileData = await fetchProfile(currentUser);
+    const nextStatus = getAccountStatus(profileData, currentUser);
+    if (nextStatus !== 'active') {
+      persistAuthNotice(nextStatus);
+      await supabase.auth.signOut();
+      setUser(null);
+      setProfile(null);
+      return;
+    }
+
+    setUser(currentUser);
+    setProfile(profileData);
+  }
+
   useEffect(() => {
-    // Load user on mount
     async function loadUser() {
       setLoading(true);
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        setUser(user);
-        if (user) {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('plan, plan_expires_at')
-            .eq('id', user.id)
-            .maybeSingle();
-
-          setProfile((profileData as UserProfile) || null);
-        }
+        await syncSession(user);
       } finally {
         setLoading(false);
       }
@@ -77,23 +104,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     loadUser();
 
-    // Set up auth listener - KEEP SIMPLE, avoid any async operations in callback
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         const currentUser = session?.user || null;
-        setUser(currentUser);
-        if (currentUser) {
-          supabase
-            .from('profiles')
-            .select('plan, plan_expires_at')
-            .eq('id', currentUser.id)
-            .maybeSingle()
-            .then(({ data }) => {
-              setProfile((data as UserProfile) || null);
-            });
-        } else {
-          setProfile(null);
-        }
+        void syncSession(currentUser);
       }
     );
 
@@ -101,11 +115,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   async function signIn(email: string, password: string) {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     if (error) throw error;
+
+    const currentUser = data.user;
+    const profileData = await fetchProfile(currentUser);
+    const nextStatus = getAccountStatus(profileData, currentUser);
+    if (nextStatus !== 'active') {
+      persistAuthNotice(nextStatus);
+      await supabase.auth.signOut();
+      throw new Error(nextStatus === 'disabled' ? 'ACCOUNT_DISABLED' : 'ACCOUNT_PENDING');
+    }
   }
 
   async function signUp(email: string, password: string) {
@@ -113,7 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email,
       password,
       options: {
-        emailRedirectTo: buildAuthRedirectUrl('signup'),
+        emailRedirectTo: buildSignupRedirectUrl(),
       },
     });
     if (error) throw error;
@@ -124,47 +147,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error;
   }
 
-  async function signInWithGoogle() {
-    const redirectTo = new URL('/', window.location.origin).toString();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo,
-      },
-    });
-    if (error) throw error;
-  }
-
   async function resendVerificationEmail(email: string) {
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email,
       options: {
-        emailRedirectTo: buildAuthRedirectUrl('signup'),
+        emailRedirectTo: buildSignupRedirectUrl(),
       },
     });
-    if (error) throw error;
-  }
-
-  async function sendPasswordResetEmail(email: string) {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: buildAuthRedirectUrl('recovery'),
-    });
-    if (error) throw error;
-  }
-
-  async function updatePassword(password: string) {
-    const { error } = await supabase.auth.updateUser({ password });
-    if (error) throw error;
-  }
-
-  async function updateEmail(email: string) {
-    const { error } = await supabase.auth.updateUser(
-      { email },
-      {
-        emailRedirectTo: buildAuthRedirectUrl('email-change'),
-      }
-    );
     if (error) throw error;
   }
 
@@ -172,17 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     try {
       const { data: { user: currentUser } } = await supabase.auth.getUser();
-      setUser(currentUser);
-      if (currentUser) {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('plan, plan_expires_at')
-          .eq('id', currentUser.id)
-          .maybeSingle();
-        setProfile((profileData as UserProfile) || null);
-      } else {
-        setProfile(null);
-      }
+      await syncSession(currentUser);
     } finally {
       setLoading(false);
     }
@@ -194,17 +174,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         profile,
         effectivePlan,
+        accountStatus,
+        isSuperuser,
         isEmailVerified,
         loading,
         refresh,
         signIn,
         signUp,
         signOut,
-        signInWithGoogle,
         resendVerificationEmail,
-        sendPasswordResetEmail,
-        updatePassword,
-        updateEmail,
       }}
     >
       {children}

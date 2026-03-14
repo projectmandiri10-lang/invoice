@@ -39,7 +39,6 @@ export default function AuthCallbackPage() {
       try {
         const currentUrl = new URL(window.location.href);
         const hashParams = new URLSearchParams(currentUrl.hash.replace(/^#/, ''));
-        const flow = currentUrl.searchParams.get('flow') || hashParams.get('type') || 'signup';
         const errorDescription =
           decodeUrlValue(currentUrl.searchParams.get('error_description')) ||
           decodeUrlValue(hashParams.get('error_description'));
@@ -62,22 +61,7 @@ export default function AuthCallbackPage() {
         } = await supabase.auth.getUser();
 
         if (!active) return;
-
-        if (flow === 'recovery') {
-          navigate('/reset-password', { replace: true });
-          return;
-        }
-
-        if (flow === 'email-change') {
-          navigate('/account?notice=email-updated', { replace: true });
-          return;
-        }
-
-        if (user) {
-          navigate('/account?notice=email-verified', { replace: true });
-        } else {
-          navigate('/login?notice=email-verified', { replace: true });
-        }
+        navigate(user ? '/login?notice=email-verified' : '/login?notice=email-verified', { replace: true });
       } catch (err: any) {
         if (active) {
           setError(err.message || text.failedTitle);

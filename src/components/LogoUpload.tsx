@@ -18,11 +18,11 @@ const copy = {
     uploadFailed: 'Failed to upload logo',
     upload: 'Upload logo',
     ownLogo: 'Use your own logo',
-    ownLogoDescription: 'Upgrade to Starter (Rp 100.000/month) to add your company logo.',
+    ownLogoDescription: 'Ask the administrator to assign the Starter plan so you can add your company logo.',
     uploading: 'Uploading...',
     formats: 'PNG, JPG, SVG (max 2MB)',
     logoAlt: 'Company logo',
-    upgradeStarter: 'Upgrade to Starter',
+    contactAdmin: 'Contact admin',
   },
   id: {
     sizeLimit: 'Ukuran file maksimal 2MB',
@@ -30,11 +30,11 @@ const copy = {
     uploadFailed: 'Gagal upload logo',
     upload: 'Unggah logo',
     ownLogo: 'Gunakan Logo Sendiri',
-    ownLogoDescription: 'Upgrade ke Starter (Rp 100.000/bulan) untuk menambahkan logo perusahaan Anda.',
+    ownLogoDescription: 'Hubungi administrator untuk mengaktifkan paket Starter agar Anda bisa menambahkan logo perusahaan.',
     uploading: 'Mengunggah...',
     formats: 'PNG, JPG, SVG (maks 2MB)',
     logoAlt: 'Logo perusahaan',
-    upgradeStarter: 'Upgrade ke Starter',
+    contactAdmin: 'Hubungi admin',
   },
 } as const;
 
@@ -89,7 +89,7 @@ export default function LogoUpload({
           onClick={onRequestUpgradeStarter}
           className="mt-3 inline-flex items-center rounded-lg bg-amber-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-amber-700"
         >
-          {text.upgradeStarter}
+          {text.contactAdmin}
         </button>
       </div>
     );

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, Upload, Palette, Type, Layout, Eye, EyeOff } from 'lucide-react';
+import { Settings, Palette, Type, Layout, Eye, EyeOff } from 'lucide-react';
 import type { AppPlan } from '@/contexts/AuthContext';
 import { useI18n } from '@/contexts/I18nContext';
 
@@ -31,7 +31,6 @@ interface DocumentSettings {
     paymentInfo: boolean;
     showPrice: boolean;
     showDecimals: boolean;
-    paymentGateway: boolean;
   };
 }
 
@@ -71,7 +70,6 @@ const defaultSettings: DocumentSettings = {
     paymentInfo: true,
     showPrice: true,
     showDecimals: true,
-    paymentGateway: false,
   },
 };
 
@@ -108,13 +106,12 @@ const copy = {
     total: 'Total',
     notes: 'Notes',
     paymentInfo: 'Payment info',
-    paymentGateway: 'Pay button',
-    upgradeStarterTitle: 'Unlock branding',
-    upgradeStarterDescription: 'Remove ads and watermark, then upload your own company logo with the Starter plan.',
-    upgradeStarterButton: 'Upgrade to Starter',
-    upgradeProTitle: 'Enable online invoice payments',
-    upgradeProDescription: 'Client portal and invoice payment buttons are available on the Pro plan.',
-    upgradeProButton: 'Upgrade to Pro',
+    contactStarterTitle: 'Unlock branding',
+    contactStarterDescription: 'Ask the administrator to assign the Starter plan so you can upload your company logo and remove free-tier branding.',
+    contactStarterButton: 'Contact admin',
+    contactProTitle: 'Unlock client portal',
+    contactProDescription: 'Ask the administrator to assign the Pro plan so you can share a read-only client portal for invoices.',
+    contactProButton: 'Contact admin',
   },
   id: {
     title: 'Pengaturan',
@@ -148,13 +145,12 @@ const copy = {
     total: 'Total',
     notes: 'Catatan',
     paymentInfo: 'Info pembayaran',
-    paymentGateway: 'Tombol bayar',
-    upgradeStarterTitle: 'Buka fitur branding',
-    upgradeStarterDescription: 'Hilangkan iklan dan watermark, lalu unggah logo perusahaan Anda dengan paket Starter.',
-    upgradeStarterButton: 'Upgrade ke Starter',
-    upgradeProTitle: 'Aktifkan pembayaran invoice online',
-    upgradeProDescription: 'Client portal dan tombol bayar invoice tersedia di paket Pro.',
-    upgradeProButton: 'Upgrade ke Pro',
+    contactStarterTitle: 'Aktifkan branding',
+    contactStarterDescription: 'Hubungi administrator untuk mengaktifkan paket Starter agar Anda bisa mengunggah logo perusahaan dan menghapus branding paket Free.',
+    contactStarterButton: 'Hubungi admin',
+    contactProTitle: 'Aktifkan portal klien',
+    contactProDescription: 'Hubungi administrator untuk mengaktifkan paket Pro agar Anda bisa membagikan portal klien versi lihat saja untuk invoice.',
+    contactProButton: 'Hubungi admin',
   },
 } as const;
 
@@ -169,8 +165,6 @@ export default function SettingsPanel({
   const { locale } = useI18n();
   const text = copy[locale];
   const [activeTab, setActiveTab] = useState<'appearance' | 'layout'>('appearance');
-  const [uploading, setUploading] = useState(false);
-
 
   const updateColorScheme = (key: keyof DocumentSettings['colorScheme'], value: string) => {
     onChange({
@@ -203,15 +197,6 @@ export default function SettingsPanel({
   };
 
   const toggleField = (field: keyof DocumentSettings['visibleFields']) => {
-    if (
-      documentType === 'invoice' &&
-      field === 'paymentGateway' &&
-      effectivePlan !== 'pro' &&
-      settings.visibleFields.paymentGateway === false
-    ) {
-      onRequestUpgradePro?.();
-      return;
-    }
     onChange({
       ...settings,
       visibleFields: {
@@ -245,8 +230,6 @@ export default function SettingsPanel({
         return text.notes;
       case 'paymentInfo':
         return text.paymentInfo;
-      case 'paymentGateway':
-        return text.paymentGateway;
       default:
         return field;
     }
@@ -388,14 +371,14 @@ export default function SettingsPanel({
 
           {effectivePlan === 'free' && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-              <p className="font-semibold text-amber-900">{text.upgradeStarterTitle}</p>
-              <p className="mt-1 text-sm text-amber-800">{text.upgradeStarterDescription}</p>
+              <p className="font-semibold text-amber-900">{text.contactStarterTitle}</p>
+              <p className="mt-1 text-sm text-amber-800">{text.contactStarterDescription}</p>
               <button
                 type="button"
                 onClick={onRequestUpgradeStarter}
                 className="mt-3 inline-flex items-center rounded-lg bg-amber-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-amber-700"
               >
-                {text.upgradeStarterButton}
+                {text.contactStarterButton}
               </button>
             </div>
           )}
@@ -499,14 +482,14 @@ export default function SettingsPanel({
 
           {documentType === 'invoice' && effectivePlan !== 'pro' && (
             <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-              <p className="font-semibold text-blue-900">{text.upgradeProTitle}</p>
-              <p className="mt-1 text-sm text-blue-800">{text.upgradeProDescription}</p>
+              <p className="font-semibold text-blue-900">{text.contactProTitle}</p>
+              <p className="mt-1 text-sm text-blue-800">{text.contactProDescription}</p>
               <button
                 type="button"
                 onClick={onRequestUpgradePro}
                 className="mt-3 inline-flex items-center rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
               >
-                {text.upgradeProButton}
+                {text.contactProButton}
               </button>
             </div>
           )}

@@ -1,23 +1,18 @@
 import React from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
-import { CreditCard, FileDown, Loader2, X } from 'lucide-react';
+import { useParams } from 'react-router-dom';
+import { FileDown } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 import { useI18n } from '@/contexts/I18nContext';
-import { InvoiceData } from '@/types/document';
+import type { InvoiceData } from '@/types/document';
 import { exportInvoiceToPDF, formatCurrency, formatDate } from '@/lib/documentUtils';
 import { invokeEdgeFunction } from '@/lib/edgeFunctions';
-import {
-  getDuitkuPaymentCategory,
-  getDuitkuPaymentCategoryLabel,
-  sortDuitkuPaymentMethods,
-} from '@/lib/duitkuPaymentMethods';
 
 interface DocumentRow {
   id: string;
   title: string;
   document_type: string;
   content: InvoiceData;
-  settings?: any;
+  settings?: Record<string, unknown> | null;
   status: string;
   created_at: string;
 }
@@ -25,32 +20,6 @@ interface DocumentRow {
 type PortalResponse = {
   client: { id: string; client_name: string };
   documents: DocumentRow[];
-};
-
-type PaymentMethod = {
-  paymentMethod: string;
-  paymentName: string;
-  paymentImage?: string;
-  totalFee?: string;
-};
-
-type InvoicePaymentMethodsResponse = {
-  amountIdr: number;
-  methods: PaymentMethod[];
-  clientName?: string;
-};
-
-type InvoiceCreateTxResponse = {
-  merchantOrderId: string;
-  paymentUrl: string;
-  expiresAt: string;
-  reference?: string;
-};
-
-type InvoiceStatusResponse = {
-  status: 'pending' | 'paid' | 'failed' | 'expired';
-  invoiceStatus?: string;
-  transaction?: any;
 };
 
 const copy = {
@@ -68,26 +37,9 @@ const copy = {
     paid: 'Paid',
     unpaid: 'Unpaid',
     download: 'Download PDF',
-    payNow: 'Pay Now',
-    payTitle: 'Pay Invoice',
-    close: 'Close',
-    loadingMethods: 'Loading payment methods...',
-    noMethods: 'Payment methods are not available.',
-    fee: 'Fee',
-    continuePay: 'Continue to payment',
-    redirecting: 'Redirecting...',
-    poweredBy: 'Powered by idCashier Invoice Generator',
-    paymentSuccess: 'Payment successful',
-    paymentSuccessDescription: 'Invoice has been marked as paid.',
-    paymentFailed: 'Payment not completed',
-    paymentFailedDescription: 'Please try again or choose another payment method.',
-    paymentPending: 'Payment is being processed',
-    paymentPendingDescription: 'Please wait a few moments.',
-    statusFailed: 'Failed to check payment status',
-    methodsFailed: 'Failed to load payment methods',
-    createFailed: 'Failed to create transaction',
+    loadFailed: 'Failed to load client portal.',
     downloadFailed: 'Failed to download PDF.',
-    channelHint: 'Payment methods shown here come directly from the active channels in the merchant Duitku project.',
+    poweredBy: 'Powered by idCashier Invoice Generator',
   },
   id: {
     loading: 'Memuat portal klien...',
@@ -103,26 +55,9 @@ const copy = {
     paid: 'Lunas',
     unpaid: 'Belum Lunas',
     download: 'Unduh PDF',
-    payNow: 'Bayar Sekarang',
-    payTitle: 'Bayar Invoice',
-    close: 'Tutup',
-    loadingMethods: 'Memuat metode pembayaran...',
-    noMethods: 'Metode pembayaran tidak tersedia.',
-    fee: 'Biaya',
-    continuePay: 'Lanjut Bayar',
-    redirecting: 'Mengalihkan...',
-    poweredBy: 'Disediakan oleh idCashier Invoice Generator',
-    paymentSuccess: 'Pembayaran berhasil',
-    paymentSuccessDescription: 'Invoice sudah ditandai lunas.',
-    paymentFailed: 'Pembayaran belum berhasil',
-    paymentFailedDescription: 'Silakan coba lagi atau pilih metode lain.',
-    paymentPending: 'Pembayaran sedang diproses',
-    paymentPendingDescription: 'Silakan tunggu beberapa saat.',
-    statusFailed: 'Gagal memeriksa status pembayaran',
-    methodsFailed: 'Gagal memuat metode pembayaran',
-    createFailed: 'Gagal membuat transaksi',
+    loadFailed: 'Gagal memuat portal klien.',
     downloadFailed: 'Gagal mengunduh PDF.',
-    channelHint: 'Metode pembayaran di sini langsung mengikuti channel yang aktif di project merchant Duitku.',
+    poweredBy: 'Disediakan oleh idCashier Invoice Generator',
   },
 } as const;
 
@@ -130,80 +65,40 @@ export default function ClientPortalPage() {
   const { accessToken = '' } = useParams<{ accessToken: string }>();
   const { locale } = useI18n();
   const text = copy[locale];
-  const [params, setParams] = useSearchParams();
-  const paidOrderId = params.get('paidOrderId') || '';
-
   const [loading, setLoading] = React.useState(true);
   const [clientName, setClientName] = React.useState('');
   const [documents, setDocuments] = React.useState<DocumentRow[]>([]);
-  const [selectedDocument, setSelectedDocument] = React.useState<DocumentRow | null>(null);
-  const [paymentMethods, setPaymentMethods] = React.useState<PaymentMethod[]>([]);
-  const [loadingMethods, setLoadingMethods] = React.useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = React.useState('');
-  const [creatingPayment, setCreatingPayment] = React.useState(false);
 
   const fetchPortal = React.useCallback(async () => {
     if (!accessToken) return;
+
     setLoading(true);
     try {
       const portalData = await invokeEdgeFunction<PortalResponse>('client-portal-data', { accessToken });
       setClientName(portalData.client.client_name);
       setDocuments((portalData.documents || []).filter((doc) => doc.document_type === 'invoice'));
+    } catch (error: any) {
+      console.error('Failed to fetch portal:', error);
+      toast.error(text.loadFailed, {
+        description: error?.message || String(error),
+      });
     } finally {
       setLoading(false);
     }
-  }, [accessToken]);
+  }, [accessToken, text.loadFailed]);
 
   React.useEffect(() => {
-    fetchPortal().catch((err) => {
-      console.error('Failed to fetch portal:', err);
-      toast.error(locale === 'id' ? 'Gagal memuat portal klien' : 'Failed to load client portal', {
-        description: err instanceof Error ? err.message : String(err),
-      });
-    });
-  }, [fetchPortal, locale]);
-
-  React.useEffect(() => {
-    if (!paidOrderId) return;
-
-    let cancelled = false;
-    const checkStatus = async () => {
-      try {
-        const res = await invokeEdgeFunction<InvoiceStatusResponse>('invoice-status', {
-          accessToken,
-          merchantOrderId: paidOrderId,
-        });
-        if (cancelled) return;
-        if (res.status === 'paid') {
-          toast.success(text.paymentSuccess, { description: text.paymentSuccessDescription });
-        } else if (res.status === 'failed' || res.status === 'expired') {
-          toast.error(text.paymentFailed, { description: text.paymentFailedDescription });
-        } else {
-          toast.info(text.paymentPending, { description: text.paymentPendingDescription });
-        }
-      } catch (err: any) {
-        if (!cancelled) {
-          toast.error(text.statusFailed, { description: err?.message || String(err) });
-        }
-      } finally {
-        if (!cancelled) {
-          fetchPortal().catch(() => {});
-          params.delete('paidOrderId');
-          setParams(params, { replace: true });
-        }
-      }
-    };
-
-    checkStatus();
-    return () => {
-      cancelled = true;
-    };
-  }, [accessToken, paidOrderId, fetchPortal, params, setParams, text]);
+    void fetchPortal();
+  }, [fetchPortal]);
 
   const handleDownload = async (doc: DocumentRow) => {
     try {
+      const rawSettings =
+        doc.settings && typeof doc.settings === 'object' && !Array.isArray(doc.settings)
+          ? (doc.settings as Record<string, any>)
+          : {};
       const settings = {
-        ...doc.settings,
+        ...rawSettings,
         visibleFields: {
           companyNPWP: true,
           dueDate: true,
@@ -214,52 +109,14 @@ export default function ClientPortalPage() {
           notes: true,
           paymentInfo: true,
           showDecimals: false,
-          ...(doc.settings?.visibleFields || {}),
+          ...(rawSettings.visibleFields || {}),
         },
       };
 
       await exportInvoiceToPDF(doc.content, settings, 'pro', locale);
-    } catch (err) {
-      console.error('Failed to download PDF:', err);
+    } catch (error) {
+      console.error('Failed to download PDF:', error);
       toast.error(text.downloadFailed);
-    }
-  };
-
-  const openPaymentModal = async (doc: DocumentRow) => {
-    try {
-      setSelectedDocument(doc);
-      setLoadingMethods(true);
-      setPaymentMethods([]);
-      setSelectedPaymentMethod('');
-
-      const res = await invokeEdgeFunction<InvoicePaymentMethodsResponse>('invoice-payment-methods', {
-        accessToken,
-        documentId: doc.id,
-      });
-
-      setPaymentMethods(sortDuitkuPaymentMethods(res.methods || []));
-    } catch (err: any) {
-      toast.error(text.methodsFailed, { description: err?.message || String(err) });
-      setSelectedDocument(null);
-    } finally {
-      setLoadingMethods(false);
-    }
-  };
-
-  const startPayment = async () => {
-    if (!selectedDocument || !selectedPaymentMethod) return;
-
-    try {
-      setCreatingPayment(true);
-      const res = await invokeEdgeFunction<InvoiceCreateTxResponse>('invoice-create-transaction', {
-        accessToken,
-        documentId: selectedDocument.id,
-        paymentMethod: selectedPaymentMethod,
-      });
-      window.location.href = res.paymentUrl;
-    } catch (err: any) {
-      toast.error(text.createFailed, { description: err?.message || String(err) });
-      setCreatingPayment(false);
     }
   };
 
@@ -277,7 +134,7 @@ export default function ClientPortalPage() {
               <p className="mt-1 text-gray-600">{clientName}</p>
             </div>
             <button
-              onClick={() => fetchPortal()}
+              onClick={() => void fetchPortal()}
               className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
             >
               {text.refresh}
@@ -304,7 +161,6 @@ export default function ClientPortalPage() {
                 <tbody>
                   {documents.map((doc) => {
                     const paid = doc.status === 'paid';
-                    const paymentEnabled = Boolean((doc.settings as any)?.visibleFields?.paymentGateway);
                     return (
                       <tr key={doc.id} className="border-t border-gray-100">
                         <td className="p-4 font-medium text-gray-900">{doc.content.invoiceNumber}</td>
@@ -320,25 +176,14 @@ export default function ClientPortalPage() {
                           </span>
                         </td>
                         <td className="p-4">
-                          <div className="flex flex-wrap gap-2">
-                            <button
-                              onClick={() => handleDownload(doc)}
-                              className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                              title={text.download}
-                            >
-                              <FileDown className="h-4 w-4" />
-                            </button>
-                            {!paid && paymentEnabled && (
-                              <button
-                                onClick={() => openPaymentModal(doc)}
-                                className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-                                title={text.payNow}
-                              >
-                                <CreditCard className="h-4 w-4" />
-                                <span>{text.payNow}</span>
-                              </button>
-                            )}
-                          </div>
+                          <button
+                            onClick={() => void handleDownload(doc)}
+                            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                            title={text.download}
+                          >
+                            <FileDown className="h-4 w-4" />
+                            <span>{text.download}</span>
+                          </button>
                         </td>
                       </tr>
                     );
@@ -348,89 +193,6 @@ export default function ClientPortalPage() {
             </div>
           )}
         </div>
-
-        {selectedDocument && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl">
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-lg font-bold text-gray-900">{text.payTitle}</h2>
-                <button
-                  onClick={() => setSelectedDocument(null)}
-                  className="rounded p-2 text-gray-500 hover:bg-gray-100"
-                  aria-label={text.close}
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              {loadingMethods ? (
-                <div className="flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-4 text-sm text-gray-600">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>{text.loadingMethods}</span>
-                </div>
-              ) : paymentMethods.length === 0 ? (
-                <p className="text-sm text-gray-600">{text.noMethods}</p>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-xs text-gray-500">{text.channelHint}</p>
-                  {paymentMethods.map((method) => {
-                    const feeNum = Number(method.totalFee || 0);
-                    const checked = selectedPaymentMethod === method.paymentMethod;
-                    const category = getDuitkuPaymentCategory(method);
-                    return (
-                      <button
-                        key={method.paymentMethod}
-                        type="button"
-                        onClick={() => setSelectedPaymentMethod(method.paymentMethod)}
-                        className={`flex w-full items-center justify-between rounded-lg border px-3 py-3 text-left transition ${
-                          checked ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-blue-300'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          {method.paymentImage ? (
-                            <img src={method.paymentImage} alt={method.paymentName} className="h-8 w-8 object-contain" />
-                          ) : (
-                            <CreditCard className="h-5 w-5 text-gray-500" />
-                          )}
-                          <div>
-                            <div className="font-medium text-gray-900">{method.paymentName}</div>
-                            <div className="mt-1 flex items-center gap-2">
-                              <span className="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-600">
-                                {getDuitkuPaymentCategoryLabel(category, locale)}
-                              </span>
-                            </div>
-                            {Number.isFinite(feeNum) && feeNum > 0 && (
-                              <div className="text-xs text-gray-500">
-                                {text.fee}: {formatCurrency(feeNum, false, locale)}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className={`h-4 w-4 rounded-full border ${checked ? 'border-blue-600 bg-blue-600' : 'border-gray-300'}`} />
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              <div className="mt-6 flex justify-end gap-3">
-                <button
-                  onClick={() => setSelectedDocument(null)}
-                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-                >
-                  {text.close}
-                </button>
-                <button
-                  onClick={startPayment}
-                  disabled={!selectedPaymentMethod || creatingPayment}
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
-                >
-                  {creatingPayment ? text.redirecting : text.continuePay}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         <footer className="mt-8 text-center text-sm text-gray-500">{text.poweredBy}</footer>
       </div>

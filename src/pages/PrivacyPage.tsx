@@ -6,107 +6,107 @@ import { useI18n } from '@/contexts/I18nContext';
 const content = {
   en: {
     title: 'Privacy Policy',
-    updated: 'Last updated: March 6, 2026',
+    updated: 'Last updated: March 14, 2026',
     intro:
       'This Privacy Policy explains how idCashier Invoice Generator collects, uses, stores, and shares information when you use https://invoice.idcashier.com.',
     sections: [
       {
         title: '1. Information we collect',
         body:
-          'We may collect account details, document content, client information, invoice metadata, payment metadata, usage records, and technical information required to operate the platform.',
+          'We may collect account details, document content, client information, usage records, IP-related technical information, and metadata required to operate the platform and enforce plan limits.',
       },
       {
         title: '2. How we use information',
         body:
-          'We use data to authenticate users, save and render documents, enforce plan limits, provide billing access, enable client portals, support invoice payments, and improve service reliability.',
+          'We use information to authenticate users, verify email addresses, manage account approval status, store documents, render previews, generate exports, support client portals, and maintain service reliability and security.',
       },
       {
-        title: '3. Duitku-related processing',
+        title: '3. Manual administration',
         body:
-          'When payment features are used, transaction-related information may be shared with Duitku and the selected payment channel to create payment instructions, process callbacks, verify transaction status, prevent fraud, and reconcile payment results.',
+          'Account status and plan assignments are managed manually by the platform superuser. To do that, the superuser may access account metadata such as email address, created time, verification state, last sign-in time, assigned plan, and account status.',
       },
       {
-        title: '4. Payment status records',
+        title: '4. Third-party services',
         body:
-          'We may store merchant order IDs, payment method identifiers, references, callback payloads, inquiry payloads, and invoice or billing status changes related to Duitku transactions.',
+          'The platform uses third-party infrastructure and services, including Supabase for authentication, storage, database operations, and email delivery. Those services may process data under their own terms and privacy policies.',
       },
       {
         title: '5. Storage and retention',
         body:
-          'We retain account, document, client, and payment metadata for as long as needed to operate the service, comply with legal obligations, resolve disputes, and maintain accurate billing and invoice history.',
+          'We retain account, document, client, and operational metadata for as long as needed to run the service, enforce limits, resolve disputes, investigate abuse, and comply with legal obligations.',
       },
       {
-        title: '6. Third-party services',
+        title: '6. Data sharing',
         body:
-          'The platform uses third-party infrastructure and services, including Supabase for data and authentication and Duitku for payment processing. Their services may process data under their own terms and policies.',
+          'We do not sell your personal data. We may share data only with service providers that help operate the platform, or when required by law, legal process, or a legitimate security need.',
       },
       {
         title: '7. Security',
         body:
-          'We apply reasonable technical and organizational measures to protect data, but no system can guarantee absolute security. You are responsible for safeguarding your own account access.',
+          'We apply reasonable technical and organizational safeguards, but no system can guarantee absolute security. You are responsible for maintaining the confidentiality of your own credentials and devices.',
       },
       {
         title: '8. Your choices',
         body:
-          'You may manage saved documents and clients within the app, and you may stop using payment features if you no longer want payment links to be generated for invoices.',
+          'You may choose whether to register, what document content to store, and whether to continue using the service. Because account management is administered manually, some requests such as activation, deactivation, or plan changes are handled by the superuser.',
       },
       {
         title: '9. Policy updates',
         body:
-          'We may update this Privacy Policy to reflect changes in the service, legal requirements, or payment processing practices. Continued use after updates means you accept the revised policy.',
+          'We may update this Privacy Policy to reflect service changes, security needs, or legal requirements. Continued use after updates become effective means you accept the revised policy.',
       },
     ],
   },
   id: {
     title: 'Kebijakan Privasi',
-    updated: 'Terakhir diperbarui: 6 Maret 2026',
+    updated: 'Terakhir diperbarui: 14 Maret 2026',
     intro:
       'Kebijakan Privasi ini menjelaskan bagaimana idCashier Invoice Generator mengumpulkan, menggunakan, menyimpan, dan membagikan informasi saat Anda menggunakan https://invoice.idcashier.com.',
     sections: [
       {
         title: '1. Informasi yang kami kumpulkan',
         body:
-          'Kami dapat mengumpulkan detail akun, isi dokumen, informasi klien, metadata invoice, metadata pembayaran, catatan penggunaan, dan informasi teknis yang diperlukan untuk menjalankan platform.',
+          'Kami dapat mengumpulkan detail akun, isi dokumen, informasi klien, catatan penggunaan, informasi teknis terkait IP, serta metadata yang diperlukan untuk menjalankan platform dan menerapkan batas paket.',
       },
       {
         title: '2. Cara kami menggunakan informasi',
         body:
-          'Kami menggunakan data untuk mengautentikasi pengguna, menyimpan dan menampilkan dokumen, menerapkan limit paket, menyediakan akses billing, mengaktifkan portal klien, mendukung pembayaran invoice, dan meningkatkan keandalan layanan.',
+          'Kami menggunakan informasi untuk mengautentikasi pengguna, memverifikasi email, mengelola status persetujuan akun, menyimpan dokumen, menampilkan preview, menghasilkan export, mendukung portal klien, serta menjaga keandalan dan keamanan layanan.',
       },
       {
-        title: '3. Pemrosesan terkait Duitku',
+        title: '3. Administrasi manual',
         body:
-          'Saat fitur pembayaran digunakan, informasi terkait transaksi dapat dibagikan ke Duitku dan kanal pembayaran yang dipilih untuk membuat instruksi pembayaran, memproses callback, memverifikasi transaction status, mencegah fraud, dan merekonsiliasi hasil pembayaran.',
+          'Status akun dan penetapan paket dikelola manual oleh superuser platform. Untuk itu, superuser dapat mengakses metadata akun seperti alamat email, waktu pembuatan akun, status verifikasi, waktu login terakhir, paket yang ditetapkan, dan status akun.',
       },
       {
-        title: '4. Catatan status pembayaran',
+        title: '4. Layanan pihak ketiga',
         body:
-          'Kami dapat menyimpan merchant order ID, identifier metode pembayaran, reference, payload callback, payload inquiry, serta perubahan status invoice atau billing yang terkait dengan transaksi Duitku.',
+          'Platform ini menggunakan infrastruktur dan layanan pihak ketiga, termasuk Supabase untuk autentikasi, penyimpanan, operasi database, dan pengiriman email. Layanan tersebut dapat memproses data berdasarkan syarat dan kebijakan privasi mereka sendiri.',
       },
       {
         title: '5. Penyimpanan dan retensi',
         body:
-          'Kami menyimpan metadata akun, dokumen, klien, dan pembayaran selama diperlukan untuk menjalankan layanan, memenuhi kewajiban hukum, menyelesaikan sengketa, dan menjaga histori billing serta invoice tetap akurat.',
+          'Kami menyimpan metadata akun, dokumen, klien, dan operasional selama diperlukan untuk menjalankan layanan, menerapkan batasan, menyelesaikan sengketa, menyelidiki penyalahgunaan, dan memenuhi kewajiban hukum.',
       },
       {
-        title: '6. Layanan pihak ketiga',
+        title: '6. Pembagian data',
         body:
-          'Platform ini menggunakan infrastruktur dan layanan pihak ketiga, termasuk Supabase untuk data dan autentikasi serta Duitku untuk pemrosesan pembayaran. Layanan mereka dapat memproses data berdasarkan syarat dan kebijakan mereka sendiri.',
+          'Kami tidak menjual data pribadi Anda. Kami hanya dapat membagikan data kepada penyedia layanan yang membantu operasional platform, atau jika diwajibkan oleh hukum, proses hukum, atau kebutuhan keamanan yang sah.',
       },
       {
         title: '7. Keamanan',
         body:
-          'Kami menerapkan langkah teknis dan organisasi yang wajar untuk melindungi data, tetapi tidak ada sistem yang dapat menjamin keamanan absolut. Anda bertanggung jawab menjaga akses akun Anda sendiri.',
+          'Kami menerapkan langkah teknis dan organisasi yang wajar, tetapi tidak ada sistem yang dapat menjamin keamanan absolut. Anda bertanggung jawab menjaga kerahasiaan kredensial dan perangkat Anda sendiri.',
       },
       {
         title: '8. Pilihan Anda',
         body:
-          'Anda dapat mengelola dokumen dan klien yang tersimpan di dalam aplikasi, dan Anda dapat berhenti menggunakan fitur pembayaran jika tidak lagi ingin menghasilkan tautan pembayaran untuk invoice.',
+          'Anda dapat memilih apakah ingin mendaftar, konten dokumen apa yang disimpan, dan apakah akan terus menggunakan layanan. Karena pengelolaan akun dilakukan secara manual, beberapa permintaan seperti aktivasi, nonaktifkan akun, atau perubahan paket ditangani oleh superuser.',
       },
       {
         title: '9. Pembaruan kebijakan',
         body:
-          'Kami dapat memperbarui Kebijakan Privasi ini untuk mencerminkan perubahan layanan, kewajiban hukum, atau praktik pemrosesan pembayaran. Penggunaan berkelanjutan setelah pembaruan berarti Anda menerima kebijakan yang direvisi.',
+          'Kami dapat memperbarui Kebijakan Privasi ini untuk mencerminkan perubahan layanan, kebutuhan keamanan, atau kewajiban hukum. Penggunaan berkelanjutan setelah pembaruan berlaku berarti Anda menerima kebijakan yang direvisi.',
       },
     ],
   },
@@ -119,17 +119,17 @@ export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      <div className="max-w-4xl mx-auto px-4 py-10">
+      <div className="mx-auto max-w-4xl px-4 py-10">
         <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
           <h1 className="text-3xl font-bold text-gray-900">{copy.title}</h1>
           <p className="mt-2 text-sm text-gray-500">{copy.updated}</p>
-          <p className="mt-6 text-gray-700 leading-7">{copy.intro}</p>
+          <p className="mt-6 leading-7 text-gray-700">{copy.intro}</p>
 
           <div className="mt-8 space-y-6">
             {copy.sections.map((section) => (
               <section key={section.title}>
                 <h2 className="text-xl font-semibold text-gray-900">{section.title}</h2>
-                <p className="mt-2 text-gray-700 leading-7">{section.body}</p>
+                <p className="mt-2 leading-7 text-gray-700">{section.body}</p>
               </section>
             ))}
           </div>

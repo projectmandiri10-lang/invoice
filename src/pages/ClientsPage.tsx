@@ -4,6 +4,7 @@ import { toast, Toaster } from 'sonner';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useI18n } from '@/contexts/I18nContext';
+import { contactAdministrator } from '@/lib/authz';
 import { supabase } from '@/lib/supabase';
 
 interface Client {
@@ -29,6 +30,8 @@ const copy = {
     createFailedDescription: 'The client name may already exist.',
     created: 'New client added successfully.',
     copied: 'Client portal link copied to clipboard.',
+    portalProOnly: 'Client portal links are available on the Pro plan.',
+    contactAdmin: 'Contact admin',
   },
   id: {
     title: 'Manajemen Klien',
@@ -46,11 +49,13 @@ const copy = {
     createFailedDescription: 'Mungkin nama klien sudah ada.',
     created: 'Klien baru berhasil ditambahkan.',
     copied: 'Tautan portal klien disalin ke clipboard.',
+    portalProOnly: 'Tautan portal klien tersedia pada paket Pro.',
+    contactAdmin: 'Hubungi admin',
   },
 } as const;
 
 export default function ClientsPage() {
-  const { user } = useAuth();
+  const { user, effectivePlan } = useAuth();
   const { locale } = useI18n();
   const text = copy[locale];
   const [clients, setClients] = useState<Client[]>([]);
@@ -102,6 +107,18 @@ export default function ClientsPage() {
   };
 
   const copyPortalLink = async (token: string) => {
+    if (effectivePlan !== 'pro') {
+      toast.error(text.portalProOnly, {
+        action: {
+          label: text.contactAdmin,
+          onClick: () => contactAdministrator(
+            locale === 'id' ? 'Permintaan aktivasi paket Pro' : 'Request to activate Pro plan'
+          ),
+        },
+      });
+      return;
+    }
+
     const link = `${window.location.origin}/portal/${token}`;
     await navigator.clipboard.writeText(link);
     toast.success(text.copied);
@@ -134,7 +151,11 @@ export default function ClientsPage() {
                         <span className="font-medium">{client.client_name}</span>
                         <button
                           onClick={() => copyPortalLink(client.portal_token)}
-                          className="flex items-center space-x-2 rounded-md bg-blue-100 px-3 py-1 text-sm text-blue-700 transition-colors hover:bg-blue-200"
+                          className={`flex items-center space-x-2 rounded-md px-3 py-1 text-sm transition-colors ${
+                            effectivePlan === 'pro'
+                              ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                              : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
+                          }`}
                           title={text.copyTitle}
                         >
                           <LinkIcon size={16} />

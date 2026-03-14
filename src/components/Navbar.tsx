@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { CreditCard, FileText, Home, Languages, LogOut, Settings2, User, Users } from 'lucide-react';
+import { FileText, Home, Languages, LogOut, ShieldCheck, User, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useI18n } from '@/contexts/I18nContext';
 import { getLanguageLabel, getPlanLabel, SUPPORTED_LOCALES } from '@/lib/i18n';
@@ -11,35 +11,27 @@ const copy = {
     home: 'Home',
     myDocuments: 'My Documents',
     clients: 'Clients',
-    billing: 'Billing',
-    account: 'Account',
+    admin: 'Admin Users',
     signOut: 'Sign out',
     signIn: 'Sign in',
     register: 'Register',
     language: 'Language',
-    upgradeButton: 'Upgrade',
-    upgradeStarter: 'Upgrade to Starter',
-    upgradePro: 'Upgrade to Pro',
   },
   id: {
     brand: 'idCashier Invoice Generator',
     home: 'Beranda',
     myDocuments: 'Dokumen Saya',
     clients: 'Klien',
-    billing: 'Billing',
-    account: 'Akun',
+    admin: 'Admin Pengguna',
     signOut: 'Keluar',
     signIn: 'Masuk',
     register: 'Daftar',
     language: 'Bahasa',
-    upgradeButton: 'Upgrade',
-    upgradeStarter: 'Upgrade ke Starter',
-    upgradePro: 'Upgrade ke Pro',
   },
 } as const;
 
 export default function Navbar() {
-  const { user, effectivePlan, signOut } = useAuth();
+  const { user, effectivePlan, isSuperuser, signOut } = useAuth();
   const { locale, setLocale } = useI18n();
   const navigate = useNavigate();
   const text = copy[locale];
@@ -48,11 +40,8 @@ export default function Navbar() {
     { to: '/', label: text.home, icon: Home },
     { to: '/my-documents', label: text.myDocuments, icon: FileText },
     { to: '/clients', label: text.clients, icon: Users },
-    { to: '/billing', label: text.billing, icon: CreditCard },
+    ...(isSuperuser ? [{ to: '/admin/users', label: text.admin, icon: ShieldCheck }] : []),
   ];
-
-  const upgradeTarget = effectivePlan === 'starter' ? 'pro_month' : 'starter_month';
-  const upgradeLabel = effectivePlan === 'starter' ? text.upgradePro : text.upgradeStarter;
 
   const getNavLinkClassName = ({ isActive }: { isActive: boolean }) =>
     `inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
@@ -102,27 +91,6 @@ export default function Navbar() {
 
             {user ? (
               <>
-                {effectivePlan !== 'pro' && (
-                  <Link
-                    to="/billing"
-                    state={{ planCode: upgradeTarget }}
-                    title={upgradeLabel}
-                    aria-label={upgradeLabel}
-                    className="inline-flex h-9 items-center gap-2 rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
-                  >
-                    <CreditCard className="h-4 w-4" />
-                    <span className="hidden sm:inline">{text.upgradeButton}</span>
-                  </Link>
-                )}
-
-                <Link
-                  to="/account"
-                  className="inline-flex h-9 items-center gap-2 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 hover:text-blue-600"
-                >
-                  <Settings2 className="h-4 w-4" />
-                  <span className="hidden sm:inline">{text.account}</span>
-                </Link>
-
                 <div className="hidden sm:inline-flex h-9 items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 text-gray-700">
                   <User className="h-4 w-4 shrink-0" />
                   <span className="max-w-[140px] truncate text-sm">{user.email}</span>
@@ -132,6 +100,7 @@ export default function Navbar() {
                 </div>
 
                 <button
+                  type="button"
                   onClick={handleSignOut}
                   className="inline-flex h-9 items-center gap-2 rounded-lg bg-red-600 px-3 text-sm font-medium text-white transition-colors hover:bg-red-700"
                 >

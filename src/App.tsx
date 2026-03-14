@@ -8,15 +8,11 @@ const HomePage = lazy(() => import('@/pages/HomePage'));
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
 const RegisterPage = lazy(() => import('@/pages/RegisterPage'));
 const CheckEmailPage = lazy(() => import('@/pages/CheckEmailPage'));
-const ForgotPasswordPage = lazy(() => import('@/pages/ForgotPasswordPage'));
-const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage'));
 const AuthCallbackPage = lazy(() => import('@/pages/AuthCallbackPage'));
-const AccountSettingsPage = lazy(() => import('@/pages/AccountSettingsPage'));
 const MyDocumentsPage = lazy(() => import('@/pages/MyDocumentsPage'));
-const BillingPage = lazy(() => import('@/pages/BillingPage'));
-const BillingReturnPage = lazy(() => import('@/pages/BillingReturnPage'));
 const ClientsPage = lazy(() => import('@/pages/ClientsPage'));
 const ClientPortalPage = lazy(() => import('@/pages/ClientPortalPage'));
+const AdminUsersPage = lazy(() => import('@/pages/AdminUsersPage'));
 const TermsPage = lazy(() => import('@/pages/TermsPage'));
 const PrivacyPage = lazy(() => import('@/pages/PrivacyPage'));
 
@@ -46,14 +42,10 @@ function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/check-email" element={<CheckEmailPage />} />
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/auth/callback" element={<AuthCallbackPage />} />
-              <Route path="/account" element={<AccountSettingsPage />} />
               <Route path="/my-documents" element={<MyDocumentsPage />} />
-              <Route path="/billing" element={<BillingPage />} />
-              <Route path="/billing/return" element={<BillingReturnPage />} />
               <Route path="/clients" element={<ClientsPage />} />
+              <Route path="/admin/users" element={<AdminUsersPage />} />
               <Route path="/portal/:accessToken" element={<ClientPortalPage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />

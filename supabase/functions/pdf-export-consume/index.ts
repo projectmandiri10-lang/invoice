@@ -1,5 +1,5 @@
 import { handleCorsOptions } from '../_shared/cors.ts';
-import { getEffectivePlan } from '../_shared/entitlements.ts';
+import { getEffectivePlan, normalizeAccountStatus } from '../_shared/authz.ts';
 import { readJsonBody } from '../_shared/request.ts';
 import { errorResponse, jsonResponse } from '../_shared/response.ts';
 import { getSupabaseAdmin, requireUser } from '../_shared/supabase.ts';
@@ -115,12 +115,13 @@ Deno.serve(async (req) => {
     if (userId) {
       const { data: profileRow, error: profileError } = await supabaseAdmin
         .from('profiles')
-        .select('plan, plan_expires_at')
+        .select('plan, account_status')
         .eq('id', userId)
         .maybeSingle();
 
       if (profileError) throw profileError;
-      const effectivePlan = getEffectivePlan(profileRow, userEmail);
+      const accountStatus = normalizeAccountStatus(profileRow?.account_status);
+      const effectivePlan = accountStatus === 'active' ? getEffectivePlan(profileRow, userEmail) : 'free';
       if (effectivePlan !== 'free') {
         return jsonResponse({ allowed: true, used: null, limit: null, remaining: null, scope: 'paid' } satisfies ConsumeResponse);
       }

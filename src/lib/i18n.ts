@@ -1,5 +1,6 @@
 export type Locale = 'en' | 'id';
 export type DocumentTypeKey = 'invoice' | 'surat_jalan' | 'kwitansi';
+export type AppPlan = 'free' | 'starter' | 'pro';
 
 export const LOCALE_STORAGE_KEY = 'idcashier_locale_v1';
 export const SUPPORTED_LOCALES: Locale[] = ['en', 'id'];
@@ -45,16 +46,6 @@ const DOCUMENT_LABELS = {
     kwitansi: 'Kwitansi',
   },
 } as const;
-
-export type AppPlan = 'free' | 'starter' | 'pro';
-export type BillingPlanCode = 'starter_month' | 'starter_year' | 'pro_month' | 'pro_year';
-
-export const BILLING_PLAN_AMOUNTS: Record<BillingPlanCode, number> = {
-  starter_month: 100000,
-  starter_year: 1000000,
-  pro_month: 150000,
-  pro_year: 1500000,
-};
 
 export const DOCUMENT_LIMITS: Record<AppPlan, number | null> = {
   free: 3,
@@ -224,31 +215,4 @@ export function getLanguageLabel(value: Locale, locale: Locale): string {
 
 export function getDocumentTypeLabel(type: DocumentTypeKey, locale: Locale): string {
   return DOCUMENT_LABELS[locale][type];
-}
-
-export function getBillingPlanLabel(code: BillingPlanCode, locale: Locale): string {
-  const amount = formatCurrency(BILLING_PLAN_AMOUNTS[code], false, locale);
-  const plan = code.startsWith('starter') ? getPlanLabel('starter', locale) : getPlanLabel('pro', locale);
-  const interval = code.endsWith('month')
-    ? locale === 'id'
-      ? 'Bulanan'
-      : 'Monthly'
-    : locale === 'id'
-      ? 'Tahunan'
-      : 'Yearly';
-
-  return `${plan} • ${interval} (${amount})`;
-}
-
-export function getIntervalPriceLabel(amount: number, interval: 'month' | 'year', locale: Locale): string {
-  const suffix =
-    interval === 'month'
-      ? locale === 'id'
-        ? '/bulan'
-        : '/month'
-      : locale === 'id'
-        ? '/tahun'
-        : '/year';
-
-  return `${formatCurrency(amount, false, locale)}${suffix}`;
 }

@@ -49,9 +49,8 @@ const copy = {
     tax: 'Tax',
     total: 'Total:',
     discountTitle: 'Discount (Rp)',
-    portalTitle: 'Payment portal link',
-    portalDescription: 'Share this link with your client so they can view the invoice and pay online when the Pro plan is active.',
-    proOnly: 'Invoice payments are available on the Pro plan.',
+    portalTitle: 'Client portal link',
+    portalDescription: 'Share this link with your client so they can review the invoice online.',
     preparingPortal: 'Preparing portal link...',
     copyLink: 'Copy Link',
     portalCopied: 'Portal link copied',
@@ -65,8 +64,6 @@ const copy = {
     signatureName: 'Name',
     signatureTitle: 'Title',
     addItem: 'Add Item',
-    upgradeProTitle: 'Upgrade to Pro',
-    upgradeProDescription: 'Large invoice? Enable the client portal and online payments with the Pro plan (Rp 150,000/month).',
   },
   id: {
     from: 'Dari:',
@@ -97,9 +94,8 @@ const copy = {
     tax: 'Pajak',
     total: 'Total:',
     discountTitle: 'Diskon (Rp)',
-    portalTitle: 'Link Portal Pembayaran',
-    portalDescription: 'Bagikan link ini ke klien agar bisa melihat invoice dan membayar online saat paket Pro aktif.',
-    proOnly: 'Fitur pembayaran invoice tersedia di paket Pro.',
+    portalTitle: 'Link Portal Klien',
+    portalDescription: 'Bagikan link ini ke klien agar mereka bisa melihat invoice secara online.',
     preparingPortal: 'Menyiapkan link portal...',
     copyLink: 'Salin Link',
     portalCopied: 'Link portal disalin',
@@ -113,8 +109,6 @@ const copy = {
     signatureName: 'Nama',
     signatureTitle: 'Jabatan',
     addItem: 'Tambah Item',
-    upgradeProTitle: 'Upgrade ke Pro',
-    upgradeProDescription: 'Invoice besar? Aktifkan client portal dan pembayaran online dengan paket Pro (Rp 150.000/bulan).',
   },
 } as const;
 
@@ -207,10 +201,9 @@ export default function EditableInvoicePreview({
   const [portalLinkLoading, setPortalLinkLoading] = React.useState(false);
 
   React.useEffect(() => {
-    const paymentGatewayEnabled = Boolean(settings?.visibleFields.paymentGateway);
     const clientName = data.clientName?.trim();
 
-    if (userTier !== 'pro' || !paymentGatewayEnabled || !userId || !clientName) {
+    if (userTier !== 'pro' || !userId || !clientName) {
       setPortalLink(null);
       setPortalLinkLoading(false);
       return;
@@ -241,16 +234,7 @@ export default function EditableInvoicePreview({
     return () => {
       cancelled = true;
     };
-  }, [data.clientName, settings?.visibleFields.paymentGateway, userId, userTier]);
-
-  React.useEffect(() => {
-    if (data.total > 50000000) {
-      toast.info(text.upgradeProTitle, {
-        description: text.upgradeProDescription,
-        duration: 8000,
-      });
-    }
-  }, [data.total, text.upgradeProTitle, text.upgradeProDescription]);
+  }, [data.clientName, userId, userTier]);
 
   React.useEffect(() => {
     const { subtotal, discount, tax, total } = calculateInvoiceTotals(
@@ -650,7 +634,7 @@ export default function EditableInvoicePreview({
             </div>
           )}
 
-          {settings?.visibleFields.paymentGateway && (
+          {userTier === 'pro' && (
             <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -661,11 +645,7 @@ export default function EditableInvoicePreview({
                 </div>
               </div>
 
-              {userTier !== 'pro' ? (
-                <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                  {text.proOnly}
-                </div>
-              ) : portalLinkLoading ? (
+              {portalLinkLoading ? (
                 <div className="mt-3 text-sm text-gray-600">{text.preparingPortal}</div>
               ) : portalLink ? (
                 <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">

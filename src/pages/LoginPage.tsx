@@ -4,6 +4,7 @@ import { LogIn } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useI18n } from '@/contexts/I18nContext';
 import LegalLinks from '@/components/LegalLinks';
+import { consumeAuthNotice } from '@/lib/authz';
 
 const copy = {
   en: {
@@ -15,21 +16,18 @@ const copy = {
     passwordPlaceholder: 'Enter your password',
     submit: 'Sign in',
     loading: 'Signing in...',
-    google: 'Continue with Google',
-    or: 'or',
     noAccount: "Don't have an account?",
     register: 'Register',
-    forgotPassword: 'Forgot password?',
     loginFailed: 'Failed to sign in. Check your email and password.',
-    googleFailed: 'Failed to sign in with Google.',
     resendVerification: 'Resend verification email',
     resendLoading: 'Sending...',
     resendSuccess: 'A new verification email has been sent.',
     resendFailed: 'Failed to resend verification email.',
     emailRequiredForResend: 'Enter your email address first.',
     unverifiedHint: 'Your email is not verified yet.',
-    noticeEmailVerified: 'Your email has been verified. You can sign in now.',
-    noticePasswordReset: 'Your password has been updated. Please sign in again.',
+    noticeEmailVerified: 'Your email has been verified. Please wait for administrator approval before signing in.',
+    pendingApproval: 'Your account is waiting for administrator approval.',
+    disabledAccount: 'Your account has been disabled. Contact the administrator.',
   },
   id: {
     title: 'Masuk',
@@ -40,21 +38,18 @@ const copy = {
     passwordPlaceholder: 'Masukkan password',
     submit: 'Masuk',
     loading: 'Memproses...',
-    google: 'Lanjut dengan Google',
-    or: 'atau',
     noAccount: 'Belum punya akun?',
     register: 'Daftar',
-    forgotPassword: 'Lupa password?',
     loginFailed: 'Gagal masuk. Periksa email dan password Anda.',
-    googleFailed: 'Gagal masuk dengan Google.',
     resendVerification: 'Kirim ulang email verifikasi',
     resendLoading: 'Mengirim...',
     resendSuccess: 'Email verifikasi baru telah dikirim.',
     resendFailed: 'Gagal mengirim ulang email verifikasi.',
     emailRequiredForResend: 'Masukkan alamat email Anda terlebih dahulu.',
     unverifiedHint: 'Email Anda belum diverifikasi.',
-    noticeEmailVerified: 'Email Anda sudah diverifikasi. Silakan masuk.',
-    noticePasswordReset: 'Password Anda berhasil diperbarui. Silakan masuk lagi.',
+    noticeEmailVerified: 'Email Anda sudah diverifikasi. Silakan tunggu persetujuan administrator sebelum masuk.',
+    pendingApproval: 'Akun Anda masih menunggu persetujuan administrator.',
+    disabledAccount: 'Akun Anda dinonaktifkan. Hubungi administrator.',
   },
 } as const;
 
@@ -67,15 +62,18 @@ export default function LoginPage() {
   const [resendSuccess, setResendSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
-  const { signIn, signInWithGoogle, resendVerificationEmail } = useAuth();
+  const { signIn, resendVerificationEmail } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const notice = searchParams.get('notice');
+  const authNotice = consumeAuthNotice();
   const noticeMessage =
     notice === 'email-verified'
       ? text.noticeEmailVerified
-      : notice === 'password-reset'
-        ? text.noticePasswordReset
+      : authNotice === 'pending'
+        ? text.pendingApproval
+        : authNotice === 'disabled'
+          ? text.disabledAccount
         : '';
   const requiresVerification = /email not confirmed|email not verified/i.test(error);
 
@@ -89,7 +87,13 @@ export default function LoginPage() {
       await signIn(email, password);
       navigate('/');
     } catch (err: any) {
-      setError(err.message || text.loginFailed);
+      if (err?.message === 'ACCOUNT_PENDING') {
+        setError(text.pendingApproval);
+      } else if (err?.message === 'ACCOUNT_DISABLED') {
+        setError(text.disabledAccount);
+      } else {
+        setError(err.message || text.loginFailed);
+      }
     } finally {
       setLoading(false);
     }
@@ -112,14 +116,6 @@ export default function LoginPage() {
       setError(err.message || text.resendFailed);
     } finally {
       setResendLoading(false);
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
-    try {
-      await signInWithGoogle();
-    } catch (err: any) {
-      setError(err.message || text.googleFailed);
     }
   };
 
@@ -162,14 +158,9 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <div className="mb-2 flex items-center justify-between gap-4">
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                {text.password}
-              </label>
-              <Link to="/forgot-password" className="text-sm font-medium text-blue-600 hover:text-blue-700">
-                {text.forgotPassword}
-              </Link>
-            </div>
+            <label htmlFor="password" className="mb-2 block text-sm font-medium text-gray-700">
+              {text.password}
+            </label>
             <input
               id="password"
               type="password"
@@ -203,38 +194,6 @@ export default function LoginPage() {
             </button>
           </div>
         )}
-
-        <div className="my-6 flex items-center">
-          <div className="h-px flex-1 bg-gray-200" />
-          <span className="px-4 text-sm text-gray-500">{text.or}</span>
-          <div className="h-px flex-1 bg-gray-200" />
-        </div>
-
-        <button
-          type="button"
-          onClick={handleGoogleSignIn}
-          className="flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 px-4 py-3 transition-colors hover:bg-gray-50"
-        >
-          <svg className="h-5 w-5" viewBox="0 0 24 24">
-            <path
-              fill="#4285F4"
-              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.03 2.53-2.2 3.31v2.74h3.56c2.08-1.92 3.28-4.74 3.28-8.06z"
-            />
-            <path
-              fill="#34A853"
-              d="M12 23c2.97 0 5.46-.98 7.28-2.69l-3.56-2.74c-.98.66-2.24 1.06-3.72 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-            />
-            <path
-              fill="#FBBC05"
-              d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.86-2.84z"
-            />
-            <path
-              fill="#EA4335"
-              d="M12 5.38c1.62 0 3.06.56 4.2 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-            />
-          </svg>
-          <span>{text.google}</span>
-        </button>
 
         <div className="mt-6 text-center">
           <p className="text-gray-600">
